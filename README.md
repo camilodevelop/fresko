@@ -75,3 +75,16 @@ public/images/          # Brand assets
 npm run build
 npm start
 ```
+
+## Deploy en Vercel
+
+1. Entra a [vercel.com](https://vercel.com) e inicia sesión con GitHub.
+2. **Add New Project** → Importa `camilodevelop/fresko`.
+3. Vercel detecta Next.js automáticamente. No cambies el **Root Directory**.
+4. Clic en **Deploy**.
+
+Cada push a `main` generará un deploy automático.
+
+**Variables de entorno:** no son obligatorias para esta landing (datos mock + WhatsApp en código).
+
+**Dominio:** en Project Settings → Domains puedes agregar `fresko.co` o el que uses.
