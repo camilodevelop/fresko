@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FRESKO Landing Page
 
-## Getting Started
+Landing page premium para **FRESKO** — bowls y ensaladas saludables en Bogotá.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router)
+- React 19 + TypeScript
+- Tailwind CSS v4
+- Framer Motion
+- Shadcn-style UI (Button, Input, Badge)
+
+## Inicio rápido
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Estructura
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/
+│   ├── layout.tsx      # Fonts, SEO metadata
+│   ├── page.tsx        # Landing composition
+│   └── globals.css     # Brand tokens
+├── components/
+│   ├── layout/         # Navbar, Footer
+│   ├── sections/       # Hero, Builder, etc.
+│   ├── bowl-builder/   # BowlPreview layers
+│   └── ui/             # Reusable UI primitives
+└── lib/
+    ├── constants.ts
+    ├── utils.ts
+    └── data/           # Mock products, builder, coverage
+public/images/          # Brand assets
+```
 
-## Learn More
+## Secciones
 
-To learn more about Next.js, take a look at the following resources:
+1. Navbar sticky con blur
+2. Hero split + animaciones
+3. Validador de cobertura (mock)
+4. Categorías BASIC / PREMIUM / FULL
+5. **Arma tu bowl** (`/arma-tu-bowl`) — builder interactivo con capas
+6. Menú teaser → `/menu`
+7. Cómo funciona
+8. Suscripciones
+9. Testimonios
+10. Footer
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Branding
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Token | Color |
+|-------|-------|
+| Primary | `#1F4D36` |
+| Fresh | `#8BC34A` |
+| Light | `#C5E1A5` |
+| Cream | `#F8F7F2` |
+| Dark | `#1B1B1B` |
 
-## Deploy on Vercel
+## Personalización
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- WhatsApp: editar `WHATSAPP_URL` en `src/lib/constants.ts`
+- Productos: `src/lib/data/products.ts`
+- Builder: `src/lib/data/builder.ts`
+- Cobertura: `src/lib/data/coverage.ts`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Build
+
+```bash
+npm run build
+npm start
+```
