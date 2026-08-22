@@ -3,11 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS, type MenuItem } from "@/lib/data/products";
 import { formatPrice } from "@/lib/utils";
-import { WHATSAPP_URL } from "@/lib/constants";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
 type MenuProductCardProps = {
   item: MenuItem;
@@ -60,16 +59,7 @@ function CardContent({ item }: { item: MenuItem }) {
               <Link href="/arma-tu-bowl">Armar</Link>
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" asChild>
-              <a
-                href={`${WHATSAPP_URL}&text=${encodeURIComponent(`Quiero pedir: ${item.name}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Plus className="h-4 w-4" />
-                Agregar
-              </a>
-            </Button>
+            <AddToCartButton item={item} />
           )}
         </div>
       </div>

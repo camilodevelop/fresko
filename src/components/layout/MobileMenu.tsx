@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ShoppingBag } from "lucide-react";
 import { useNavActive } from "@/components/layout/NavActiveProvider";
 import { Button } from "@/components/ui/button";
-import { NAV_LINKS, WHATSAPP_URL } from "@/lib/constants";
+import { NAV_LINKS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const MOBILE_MENU_TOP = "4.5rem";
@@ -92,15 +91,9 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
             <div className="shrink-0 border-t border-[#1F4D36]/8 px-6 py-5 pb-8">
               <Button className="w-full" asChild>
-                <a
-                  href={WHATSAPP_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={onClose}
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  Pedir ahora
-                </a>
+                <Link href="/login" onClick={onClose}>
+                  Iniciar sesión
+                </Link>
               </Button>
             </div>
           </motion.nav>

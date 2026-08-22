@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, ShoppingBag } from "lucide-react";
+import { Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MenuProductCard } from "@/components/menu/MenuProductCard";
 import {
@@ -59,10 +59,9 @@ export function MenuPageContent() {
               </p>
             </div>
             <Button size="lg" asChild className="shrink-0">
-              <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
-                <ShoppingBag className="h-5 w-5" />
-                Pedir ahora
-              </a>
+              <Link href="/carrito">
+                Ver carrito
+              </Link>
             </Button>
           </div>
         </div>

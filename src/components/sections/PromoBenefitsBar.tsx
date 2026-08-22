@@ -13,12 +13,12 @@ const benefits = [
   },
   {
     icon: CalendarCheck,
-    title: "Comida del día",
-    text: "Menú variado, balanceado y delicioso.",
+    title: "Come sin complicarte",
+    text: "Simplifica tus comidas: pide, programa y listo.",
   },
   {
     icon: Heart,
-    title: "Cuídate sin complicaciones",
+    title: "Cuida tu salud",
     text: "Comida saludable que se adapta a tu estilo de vida.",
   },
 ];

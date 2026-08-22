@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
-import { Menu, ShoppingBag, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { NavActiveProvider } from "@/components/layout/NavActiveProvider";
 import { NavLink } from "@/components/layout/NavLink";
 import { MobileMenu } from "@/components/layout/MobileMenu";
+import { CartNavButton } from "@/components/cart/CartNavButton";
 import { Button } from "@/components/ui/button";
-import { NAV_LINKS, WHATSAPP_URL } from "@/lib/constants";
+import { NAV_LINKS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
@@ -65,11 +66,9 @@ export function Navbar() {
           </ul>
 
           <div className="flex items-center gap-2">
+            <CartNavButton />
             <Button size="sm" className="hidden sm:inline-flex" asChild>
-              <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
-                <ShoppingBag className="h-4 w-4" />
-                Pedir ahora
-              </a>
+              <Link href="/login">Iniciar sesión</Link>
             </Button>
             <button
               type="button"

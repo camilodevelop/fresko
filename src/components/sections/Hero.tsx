@@ -15,14 +15,14 @@ import { Badge } from "@/components/ui/badge";
 import { WHATSAPP_URL } from "@/lib/constants";
 
 const badges = [
-  { icon: Truck, label: "Entrega hoy" },
+  { icon: Truck, label: "Entrega programada" },
   { icon: Wallet, label: "Desde $10.000" },
   { icon: Leaf, label: "Ingredientes frescos" },
 ];
 
 const heroStats = [
   { value: "15+", label: "Combos" },
-  { value: "45 min", label: "Entrega" },
+  { value: "Gratis", label: "Envio" },
   { value: "4.9★", label: "Rating" },
 ];
 
@@ -61,8 +61,9 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-lg text-base leading-relaxed text-[#1B1B1B]/70 sm:text-lg">
-            Ensaladas y bowls preparados diariamente con ingredientes frescos y
-            balanceados.
+            Ensaladas y bowls con ingredientes frescos y balanceados,
+            preparados cada día. Programa tu pedido y recíbelo gratis y a
+            tiempo.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">

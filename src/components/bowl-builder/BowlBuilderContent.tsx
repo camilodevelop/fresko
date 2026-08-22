@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ShoppingCart } from "lucide-react";
 import { BowlPreview } from "@/components/bowl-builder/BowlPreview";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/components/cart/CartProvider";
 import {
   BASE_BOWL_PRICE,
   BUILDER_OPTIONS,
@@ -13,7 +15,6 @@ import {
   type BuilderStep,
 } from "@/lib/data/builder";
 import { formatPrice, cn } from "@/lib/utils";
-import { WHATSAPP_URL } from "@/lib/constants";
 
 type Selections = Record<BuilderStep, string[]>;
 
@@ -26,6 +27,8 @@ const initialSelections: Selections = {
 };
 
 export function BowlBuilderContent() {
+  const router = useRouter();
+  const { addItem } = useCart();
   const [activeStep, setActiveStep] = useState<BuilderStep>("base");
   const [selections, setSelections] = useState<Selections>(initialSelections);
 
@@ -75,9 +78,18 @@ export function BowlBuilderContent() {
     ).filter(Boolean) as { step: string; name: string; price: number }[];
   }, [selections]);
 
-  const whatsappMessage = encodeURIComponent(
-    `Hola FRESKO! Quiero pedir mi bowl personalizado:\n${summaryItems.map((i) => `- ${i.name}`).join("\n")}\nTotal: ${formatPrice(totalPrice)}`
-  );
+  const addCustomBowlToCart = () => {
+    if (selections.base.length === 0) return;
+    addItem({
+      id: "custom-bowl",
+      name: "Bowl personalizado",
+      price: totalPrice,
+      image: "/images/bowl.png",
+      details: summaryItems.map((item) => item.name).join(", "),
+      unique: true,
+    });
+    router.push("/carrito");
+  };
 
   return (
     <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
@@ -184,16 +196,11 @@ export function BowlBuilderContent() {
             size="lg"
             className="mt-6 w-full"
             disabled={selections.base.length === 0}
-            asChild
+            type="button"
+            onClick={addCustomBowlToCart}
           >
-            <a
-              href={`${WHATSAPP_URL}&text=${whatsappMessage}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              Agregar al pedido
-            </a>
+            <ShoppingCart className="h-5 w-5" />
+            Agregar al carrito
           </Button>
           {selections.base.length === 0 && (
             <p className="mt-2 text-center text-xs text-white/50">

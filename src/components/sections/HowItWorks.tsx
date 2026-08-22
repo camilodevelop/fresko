@@ -1,26 +1,27 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChefHat, MousePointerClick, Truck } from "lucide-react";
+import { CalendarClock, ChefHat, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { WHATSAPP_URL } from "@/lib/constants";
 
 const steps = [
   {
-    icon: MousePointerClick,
-    title: "Elige",
-    description: "Selecciona tu bowl favorito o arma el tuyo con ingredientes frescos.",
+    icon: CalendarClock,
+    title: "Elige y programa",
+    description:
+      "Escoge tu bowl o ensalada y programa el día y la franja horaria de entrega.",
   },
   {
     icon: ChefHat,
     title: "Armamos",
-    description: "Preparamos tu pedido al momento con ingredientes del día.",
+    description: "Preparamos tu pedido el día de la entrega, con ingredientes del día.",
   },
   {
-    icon: Truck,
-    title: "Recibe",
-    description: "Entrega rápida y segura directo a tu puerta en Bogotá.",
+    icon: Leaf,
+    title: "Recibe fresco",
+    description: "Lo recibes fresco y con envio gratis",
   },
 ];
 
@@ -29,9 +30,9 @@ export function HowItWorks() {
     <section className="py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Simple y rápido"
+          eyebrow="Envío programado"
           title="Cómo funciona"
-          description="De la pantalla a tu mesa en tres pasos."
+          description="Pides, programas tu entrega y lo recibes fresco. En tres pasos."
         />
 
         <div className="mt-14 grid gap-8 md:grid-cols-3">
