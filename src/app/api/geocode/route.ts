@@ -108,17 +108,18 @@ async function photonForward(q: string, limit: number): Promise<Place[]> {
     }>;
   };
 
-  return (data.features ?? [])
-    .map((f) => {
-      const [lng, lat] = f.geometry?.coordinates ?? [];
-      const p = f.properties ?? {};
-      const name = p.name || p.street || "Lugar";
-      const label = [name, p.district, p.city, p.country]
-        .filter(Boolean)
-        .join(", ");
-      return { lat, lng, label, name };
-    })
-    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  return (data.features ?? []).flatMap((f) => {
+    const coords = f.geometry?.coordinates;
+    if (!coords || coords.length < 2) return [];
+    const [lng, lat] = coords;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return [];
+    const p = f.properties ?? {};
+    const name = p.name || p.street || "Lugar";
+    const label = [name, p.district, p.city, p.country]
+      .filter(Boolean)
+      .join(", ");
+    return [{ lat, lng, label, name }];
+  });
 }
 
 async function esriReverse(lat: string, lng: string) {
