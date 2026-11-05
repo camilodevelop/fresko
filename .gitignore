@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# credenciales de prueba de la nube (locales)
+supabase/.cloud-test-users.txt

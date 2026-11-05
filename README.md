@@ -89,15 +89,6 @@ npm run build
 npm start
 ```
 
-## Deploy en Vercel
+## Despliegue
 
-1. Entra a [vercel.com](https://vercel.com) e inicia sesión con GitHub.
-2. **Add New Project** → Importa `camilodevelop/fresko`.
-3. Vercel detecta Next.js automáticamente. No cambies el **Root Directory**.
-4. Clic en **Deploy**.
-
-Cada push a `main` generará un deploy automático.
-
-**Variables de entorno:** `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` de un proyecto Supabase en la nube (aplica las migraciones con `npx supabase link` + `npx supabase db push`).
-
-**Dominio:** en Project Settings → Domains puedes agregar `fresko.co` o el que uses.
+Ver [DEPLOY.md](DEPLOY.md): Vercel, Docker, Node o Cloudflare. El código no está atado a ningún proveedor.
