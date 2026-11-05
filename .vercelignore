@@ -1,4 +1,6 @@
+.env*
+!.env.example
+supabase/.cloud-test-users.txt
+supabase/.temp
 .next
 node_modules
-.git
-.DS_Store
