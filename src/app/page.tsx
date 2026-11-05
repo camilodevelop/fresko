@@ -9,8 +9,13 @@ import { MenuTeaser } from "@/components/sections/MenuTeaser";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { Subscriptions } from "@/components/sections/Subscriptions";
 import { Testimonials } from "@/components/sections/Testimonials";
+import { getActiveZones } from "@/lib/data/zones";
 
-export default function HomePage() {
+// Las zonas se editan en el panel; la landing se regenera al guardar y cada 5 min.
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const zones = await getActiveZones();
   return (
     <>
       <Navbar />
@@ -18,7 +23,7 @@ export default function HomePage() {
         <Hero />
         <PromoBenefitsBar />
         <Categories />
-        <CoverageValidator />
+        <CoverageValidator zones={zones} />
         <BowlBuilderTeaser />
         <MenuTeaser />
         <HowItWorks />

@@ -11,14 +11,15 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import {
-  COVERAGE_POLYGONS,
   MAP_CENTER,
+  type CoverageZone,
   type LatLng,
 } from "@/lib/data/coverage";
 
 export type MapSuggestion = LatLng & { label: string; name?: string };
 
 type CoverageMapProps = {
+  zones: CoverageZone[];
   marker: LatLng | null;
   covered: boolean | null;
   suggestions?: MapSuggestion[];
@@ -63,6 +64,7 @@ function FitSuggestions({ points }: { points: LatLng[] }) {
 }
 
 export function CoverageMap({
+  zones,
   marker,
   covered,
   suggestions = [],
@@ -76,7 +78,7 @@ export function CoverageMap({
   return (
     <MapContainer
       center={[MAP_CENTER.lat, MAP_CENTER.lng]}
-      zoom={11}
+      zoom={12}
       className="h-full min-h-[280px] w-full rounded-2xl"
       scrollWheelZoom
       attributionControl
@@ -85,14 +87,14 @@ export function CoverageMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {COVERAGE_POLYGONS.map((polygon, index) => (
+      {zones.map((zone) => (
         <Polygon
-          key={index}
-          positions={polygon.map((p) => [p.lat, p.lng] as [number, number])}
+          key={zone.id}
+          positions={zone.polygon.map((p) => [p.lat, p.lng] as [number, number])}
           pathOptions={{
-            color: stroke,
+            color: covered === false ? stroke : zone.color,
             weight: 2,
-            fillColor: fill,
+            fillColor: covered === false ? fill : zone.color,
             fillOpacity: covered === false ? 0.18 : 0.28,
           }}
         />

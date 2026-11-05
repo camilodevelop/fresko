@@ -1,32 +1,16 @@
 export type LatLng = { lat: number; lng: number };
 
-/** Centro de Suba */
-export const MAP_CENTER: LatLng = { lat: 4.72, lng: -74.09 };
+/** Zona de cobertura tal como la expone la base de datos. */
+export type CoverageZone = {
+  id: string;
+  name: string;
+  cityName: string;
+  color: string;
+  polygon: LatLng[];
+};
 
-/**
- * Cobertura Suba. El borde derecho sigue la Autopista Norte
- * (Calle 100 → Calle 183). No cruza a Usaquén.
- */
-export const SUBA_POLYGON: LatLng[] = [
-  // Autopista Norte, de sur a norte
-  { lat: 4.685, lng: -74.057 }, // Calle 100
-  { lat: 4.691, lng: -74.056 }, // Calle 106
-  { lat: 4.698, lng: -74.055 }, // Pepe Sierra / 116
-  { lat: 4.707, lng: -74.054 }, // Prado / 127
-  { lat: 4.714, lng: -74.053 }, // Alcalá / 134
-  { lat: 4.721, lng: -74.052 }, // Calle 142
-  { lat: 4.734, lng: -74.051 }, // Mazurén / 153
-  { lat: 4.748, lng: -74.049 }, // Toberín
-  { lat: 4.754, lng: -74.048 }, // Portal Norte / 170
-  { lat: 4.762, lng: -74.046 }, // Calle 183
-  // Norte (Calle 183) hacia el oeste y cierre por Suba
-  { lat: 4.762, lng: -74.125 },
-  { lat: 4.735, lng: -74.132 },
-  { lat: 4.700, lng: -74.105 },
-  { lat: 4.685, lng: -74.080 },
-];
-
-export const COVERAGE_POLYGONS = [SUBA_POLYGON];
+/** Centro por defecto del mapa: suroccidente de Bogotá. */
+export const MAP_CENTER: LatLng = { lat: 4.625, lng: -74.15 };
 
 export function isPointInPolygon(point: LatLng, polygon: LatLng[]): boolean {
   let inside = false;
@@ -45,66 +29,34 @@ export function isPointInPolygon(point: LatLng, polygon: LatLng[]): boolean {
   return inside;
 }
 
-export function checkCoverageByCoords(coords: LatLng): {
-  covered: boolean;
-  message: string;
-  detail?: string;
-} {
-  if (isPointInPolygon(coords, SUBA_POLYGON)) {
-    return {
-      covered: true,
-      message: "¡Sí hay cobertura en Suba!",
-      detail:
-        "Programa tu entrega y el envío siempre es gratis. Coordinamos la logística por ti.",
-    };
-  }
-
-  return {
-    covered: false,
-    message: "Aún no cubrimos esta zona",
-    detail:
-      "Hoy cubrimos Suba y parte de Usaquén. Pronto llegamos hasta donde estás: déjanos tu dirección y te avisamos.",
-  };
+export function findZone(coords: LatLng, zones: CoverageZone[]) {
+  return zones.find((z) => z.polygon.length >= 3 && isPointInPolygon(coords, z.polygon));
 }
 
-export function checkCoverageByAddress(address: string): {
-  covered: boolean;
-  message: string;
-  detail?: string;
-} {
-  const normalized = address.toLowerCase().trim();
+export function zoneNames(zones: CoverageZone[]): string {
+  const names = zones.map((z) => z.name);
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} y ${names.at(-1)}`;
+}
 
-  if (normalized.length < 4) {
-    return {
-      covered: false,
-      message: "Ingresa una dirección más completa para verificar.",
-    };
-  }
-
-  const inSuba = [
-    "suba",
-    "niza",
-    "colina",
-    "britania",
-    "lisboa",
-    "bilbao",
-    "costa azul",
-    "prado veraniego",
-  ].some((z) => normalized.includes(z));
-
-  if (inSuba) {
+export function checkCoverageByCoords(
+  coords: LatLng,
+  zones: CoverageZone[]
+): { covered: boolean; message: string; detail?: string } {
+  const zone = findZone(coords, zones);
+  if (zone) {
     return {
       covered: true,
-      message: "¡Sí hay cobertura en Suba!",
-      detail:
-        "Programa tu entrega y el envío siempre es gratis. Coordinamos la logística por ti.",
+      message: `¡Sí hay cobertura en ${zone.name}!`,
+      detail: "Programa tu entrega desde el día siguiente. Coordinamos la logística por ti.",
     };
   }
 
   return {
     covered: false,
     message: "Aún no cubrimos esta zona",
-    detail:
-      "Hoy cubrimos Suba y parte de Usaquén. Pronto llegamos hasta donde estás: déjanos tu dirección y te avisamos.",
+    detail: zones.length
+      ? `Hoy cubrimos ${zoneNames(zones)}. Pronto llegamos hasta donde estás.`
+      : "Pronto llegamos hasta donde estás.",
   };
 }

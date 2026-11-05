@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/ui/section-heading";
 import {
   checkCoverageByCoords,
+  zoneNames,
+  type CoverageZone,
   type LatLng,
 } from "@/lib/data/coverage";
 import { cn } from "@/lib/utils";
@@ -34,7 +36,8 @@ const CoverageMap = dynamic(
 
 type Status = "idle" | "loading" | "success" | "error";
 
-export function CoverageValidator() {
+export function CoverageValidator({ zones }: { zones: CoverageZone[] }) {
+  const coverageLabel = zones.length ? zoneNames(zones) : "nuevas zonas muy pronto";
   const [address, setAddress] = useState("");
   const [marker, setMarker] = useState<LatLng | null>(null);
   const [status, setStatus] = useState<Status>("idle");
@@ -54,7 +57,7 @@ export function CoverageValidator() {
     setGeoError(null);
     setSuggestions([]);
     setHighlightedIndex(-1);
-    const res = checkCoverageByCoords(coords);
+    const res = checkCoverageByCoords(coords, zones);
     setCovered(res.covered);
     setResult({ message: res.message, detail: res.detail });
     setStatus(res.covered ? "success" : "error");
@@ -62,7 +65,7 @@ export function CoverageValidator() {
       skipSuggestRef.current = true;
       setAddress(label);
     }
-  }, []);
+  }, [zones]);
 
   useEffect(() => {
     if (skipSuggestRef.current) {
@@ -187,7 +190,7 @@ export function CoverageValidator() {
     setResult({
       message: "No encontramos esa dirección en el mapa",
       detail:
-        "Prueba con calle y carrera (ej. Calle 127 # 91, Suba) o toca el mapa para elegir el punto.",
+        "Prueba con calle y carrera (ej. Calle 38 Sur # 78-20) o toca el mapa para elegir el punto.",
     });
   };
 
@@ -197,7 +200,7 @@ export function CoverageValidator() {
         <SectionHeading
           eyebrow="Cobertura · Envío gratis"
           title="¿Llegamos a tu zona?"
-          description="Hoy cubrimos Suba y parte de Usaquén. Usa tu ubicación o busca tu dirección para ver si hay cobertura."
+          description={`Hoy cubrimos ${coverageLabel}. Usa tu ubicación o busca tu dirección para ver si hay cobertura.`}
         />
 
         <motion.div
@@ -348,7 +351,7 @@ export function CoverageValidator() {
                 </div>
 
                     <p className="mt-3 text-xs text-[#1B1B1B]/45">
-                      Ejemplo: Calle 127 # 91, Suba. También puedes tocar el mapa.
+                      Ejemplo: Calle 38 Sur # 78-20. También puedes tocar el mapa.
                     </p>
 
                 <AnimatePresence mode="wait">
@@ -404,6 +407,7 @@ export function CoverageValidator() {
 
               <div className="relative min-h-[300px] border-t border-[#1F4D36]/8 bg-[#F4F8F2] p-4 lg:min-h-[420px] lg:border-l lg:border-t-0">
                 <CoverageMap
+                  zones={zones}
                   marker={marker}
                   covered={covered}
                   suggestions={suggestions}
@@ -414,7 +418,7 @@ export function CoverageValidator() {
                 <div className="pointer-events-none absolute bottom-6 left-6 right-6 z-[400] flex flex-wrap gap-2">
                   <span className="rounded-full bg-white/95 px-3 py-1 text-[10px] font-semibold text-[#1F4D36] shadow-sm">
                     <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#8BC34A]" />
-                    Zona de cobertura: Suba y parte de Usaquén
+                    Zona de cobertura: {coverageLabel}
                   </span>
                 </div>
               </div>

@@ -1,32 +1,20 @@
-export const ACCOUNT_NAV = [
+import type { NavGroup } from "@/components/dashboard/types";
+
+export const ACCOUNT_NAV_GROUPS: NavGroup[] = [
   {
-    href: "/cuenta",
-    label: "Inicio",
-    description: "Resumen de tu cuenta y accesos rápidos.",
+    label: "Mi cuenta",
+    items: [
+      { href: "/cuenta", label: "Inicio", icon: "home", description: "Resumen de tu cuenta y accesos rápidos." },
+      { href: "/cuenta/pedidos", label: "Mis pedidos", icon: "package", description: "Historial y estado de tus bowls y ensaladas." },
+      { href: "/cuenta/suscripcion", label: "Mi suscripción", icon: "repeat", description: "Plan activo, porciones y vigencia." },
+      { href: "/cuenta/entregas", label: "Entregas", icon: "calendar", description: "Calendario y franjas de tus próximas entregas." },
+      { href: "/cuenta/direcciones", label: "Direcciones", icon: "map", description: "Dónde recibes tus pedidos en cobertura." },
+    ],
   },
   {
-    href: "/cuenta/pedidos",
-    label: "Mis pedidos",
-    description: "Historial y estado de tus bowls y ensaladas.",
+    label: "Configuración",
+    items: [
+      { href: "/cuenta/perfil", label: "Mi perfil", icon: "user", description: "Foto, datos de contacto y contraseña." },
+    ],
   },
-  {
-    href: "/cuenta/suscripcion",
-    label: "Mi suscripción",
-    description: "Plan activo, pausas y cambios de menú.",
-  },
-  {
-    href: "/cuenta/entregas",
-    label: "Entregas programadas",
-    description: "Franjas horarias y próximas entregas.",
-  },
-  {
-    href: "/cuenta/direcciones",
-    label: "Direcciones",
-    description: "Dónde recibes tus pedidos en cobertura.",
-  },
-  {
-    href: "/cuenta/perfil",
-    label: "Mi perfil",
-    description: "Datos de contacto y preferencias.",
-  },
-] as const;
+];

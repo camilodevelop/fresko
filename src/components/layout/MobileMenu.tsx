@@ -6,6 +6,7 @@ import { useNavActive } from "@/components/layout/NavActiveProvider";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useSignedIn } from "@/hooks/use-signed-in";
 
 const MOBILE_MENU_TOP = "4.5rem";
 
@@ -49,6 +50,7 @@ function MobileNavItem({
 }
 
 export function MobileMenu({ open, onClose }: MobileMenuProps) {
+  const signedIn = useSignedIn();
   return (
     <AnimatePresence>
       {open && (
@@ -91,8 +93,8 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
             <div className="shrink-0 border-t border-[#1F4D36]/8 px-6 py-5 pb-8">
               <Button className="w-full" asChild>
-                <Link href="/login" onClick={onClose}>
-                  Iniciar sesión
+                <Link href={signedIn ? "/cuenta" : "/login"} onClick={onClose}>
+                  {signedIn ? "Mi cuenta" : "Iniciar sesión"}
                 </Link>
               </Button>
             </div>

@@ -12,10 +12,12 @@ import { CartNavButton } from "@/components/cart/CartNavButton";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useSignedIn } from "@/hooks/use-signed-in";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const signedIn = useSignedIn();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -68,7 +70,9 @@ export function Navbar() {
           <div className="flex items-center gap-2">
             <CartNavButton />
             <Button size="sm" className="hidden sm:inline-flex" asChild>
-              <Link href="/login">Iniciar sesión</Link>
+              <Link href={signedIn ? "/cuenta" : "/login"}>
+                {signedIn ? "Mi cuenta" : "Iniciar sesión"}
+              </Link>
             </Button>
             <button
               type="button"

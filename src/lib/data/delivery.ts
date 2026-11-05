@@ -1,7 +1,7 @@
+// Temporal hasta la fase de pedidos: allí las franjas salen de la zona en la base de datos.
 export const DELIVERY_SLOTS = [
-  { id: "am", label: "8:00 – 12:00" },
-  { id: "md", label: "12:00 – 16:00" },
-  { id: "pm", label: "16:00 – 20:00" },
+  { id: "am", label: "11:00 – 13:00" },
+  { id: "pm", label: "13:00 – 15:00" },
 ] as const;
 
 export type DeliverySlotId = (typeof DELIVERY_SLOTS)[number]["id"];

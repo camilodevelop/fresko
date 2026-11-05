@@ -12,12 +12,25 @@ Landing page premium para **FRESKO** — bowls y ensaladas saludables en Bogotá
 
 ## Inicio rápido
 
+Requiere Docker Desktop abierto (Supabase corre localmente).
+
 ```bash
 npm install
+npx supabase start        # base de datos, auth y panel en Docker
+cp .env.example .env.local # pega la PUBLISHABLE_KEY que imprime el comando anterior
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000).
+- Sitio: [http://localhost:3000](http://localhost:3000)
+- Panel: [http://localhost:3000/admin](http://localhost:3000/admin)
+- Supabase Studio (ver tablas): [http://127.0.0.1:54323](http://127.0.0.1:54323)
+- Correos de prueba (Mailpit): [http://127.0.0.1:54324](http://127.0.0.1:54324)
+
+Usuarios de prueba (contraseña `fresko123`): `admin@fresko.test`, `cocina@fresko.test`,
+`domicilios@fresko.test`, `cliente@fresko.test`.
+
+`npx supabase db reset` reinicia la base con las migraciones de `supabase/migrations` y `supabase/seed.sql`.
+Tras cambiar el esquema: `npx supabase gen types typescript > src/lib/supabase/database.types.ts`.
 
 ## Estructura
 
@@ -85,6 +98,6 @@ npm start
 
 Cada push a `main` generará un deploy automático.
 
-**Variables de entorno:** no son obligatorias para esta landing (datos mock + WhatsApp en código).
+**Variables de entorno:** `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` de un proyecto Supabase en la nube (aplica las migraciones con `npx supabase link` + `npx supabase db push`).
 
 **Dominio:** en Project Settings → Domains puedes agregar `fresko.co` o el que uses.

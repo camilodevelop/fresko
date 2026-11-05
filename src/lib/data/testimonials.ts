@@ -20,7 +20,7 @@ export const TESTIMONIALS: Testimonial[] = [
   {
     id: "2",
     name: "Andrés M.",
-    role: "Emprendedor · Usaquén",
+    role: "Emprendedor · Kennedy",
     comment:
       "El arma tu bowl es adictivo. Puedo comer saludable sin sacrificar sabor. La entrega es rapidísima.",
     rating: 5,

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -13,7 +14,9 @@ export default function LoginPage() {
     <>
       <Navbar />
       <main className="flex min-h-screen items-center justify-center bg-[#F8F7F2] px-4 py-28">
-        <LoginForm />
+        <Suspense>
+          <LoginForm />
+        </Suspense>
       </main>
       <Footer />
     </>
