@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { notify, toast } from "@/lib/notify";
-import { ImagePlus, Loader2, Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
+import { Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { saveProduct, type ProductInput } from "@/app/admin/catalogo/actions";
 import { Panel, StatusBadge, fieldLabelClass } from "@/components/dashboard/ui";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   formatPercent,
   planDishValue,
-  planExtra,
   realMargin,
   suggestedPrice,
   type CategoryPricing,
@@ -24,26 +22,48 @@ import {
   type PricingSettings,
   type Unit,
 } from "@/lib/pricing";
-import type { PlanRow } from "@/lib/catalog-admin";
-import { createClient } from "@/lib/supabase/client";
+import type { IngredientNutrition, PlanRow } from "@/lib/catalog-admin";
+import { ALLERGENS, EMPTY_NUTRITION, type Nutrition } from "@/lib/nutrition";
+import { ProductNutritionPanel } from "./ProductNutritionPanel";
+import { ProductImagePicker } from "./ProductImagePicker";
+import { uploadCatalogImage } from "@/lib/upload-image";
 import { cn, formatPrice } from "@/lib/utils";
 
-export type EditorIngredient = { id: string; name: string; category: string; unit: Unit; cost_per_unit: number; active: boolean };
+export type EditorIngredient = {
+  id: string;
+  name: string;
+  category: string;
+  unit: Unit;
+  cost_per_unit: number;
+  active: boolean;
+  nutrition: IngredientNutrition;
+  allergens: string[];
+};
+
+/** Suma la nutrición de la receta (misma regla que la base de datos). */
+function recipeNutrition(lines: { quantity: number; ing?: EditorIngredient }[]) {
+  const total: Nutrition = { ...EMPTY_NUTRITION };
+  const allergens = new Set<string>();
+  for (const { quantity, ing } of lines) {
+    if (!ing || !(quantity > 0)) continue;
+    const factor = ing.unit === "un" ? quantity : quantity / 100;
+    total.kcal += ing.nutrition.kcal * factor;
+    total.protein += ing.nutrition.protein * factor;
+    total.carbs += ing.nutrition.carbs * factor;
+    total.fat += ing.nutrition.fat * factor;
+    total.fiber += ing.nutrition.fiber * factor;
+    if (ing.unit !== "un") total.weight += quantity;
+    ing.allergens.forEach((a) => allergens.add(a));
+  }
+  const r1 = (x: number) => Math.round(x * 10) / 10;
+  return {
+    nutrition: { kcal: Math.round(total.kcal), protein: r1(total.protein), carbs: r1(total.carbs), fat: r1(total.fat), fiber: r1(total.fiber), weight: Math.round(total.weight) },
+    allergens: ALLERGENS.map((a) => a.id as string).filter((id) => allergens.has(id)),
+  };
+}
 
 const selectClass = "h-11 w-full rounded-2xl border border-[#1F4D36]/15 bg-white px-3 text-sm text-[#1B1B1B]";
 
-/** Ajusta a máx. 900 px (sin recortar) y convierte a WebP conservando transparencia. */
-async function toWebp(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("imagen"))), "image/webp", 0.88)
-  );
-}
 
 export function ProductEditor({
   initial,
@@ -65,7 +85,6 @@ export function ProductEditor({
   const [saving, startSave] = useTransition();
   const router = useRouter();
   const [uploading, startUpload] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const update = (patch: Partial<ProductInput>) => setP((prev) => ({ ...prev, ...patch }));
   const byId = useMemo(() => new Map(ingredients.map((i) => [i.id, i])), [ingredients]);
@@ -76,13 +95,14 @@ export function ProductEditor({
     return { ...r, ing, cost: ing ? r.quantity * ing.cost_per_unit : 0 };
   });
   const cost = Math.round(lines.reduce((s, l) => s + l.cost, 0));
+  const computed = recipeNutrition(lines);
   const target = p.targetMargin ?? settings.targetMargin;
   const suggested = suggestedPrice(cost, target, settings.rounding);
   const price = p.price;
   const margin = realMargin(price, cost);
+  const profit = price - cost;
   const marginTone = margin >= target - 0.005 ? "green" : margin >= target - 0.1 ? "amber" : "red";
   const base = settings.planBaseValue;
-  const extra = planExtra(price, base);
   const countsAs = planDishValue(price, base);
 
   const setPrice = (value: number) => {
@@ -93,17 +113,11 @@ export function ProductEditor({
   const upload = (file?: File) => {
     if (!file) return;
     startUpload(async () => {
-      try {
-        const blob = await toWebp(file);
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-        const supabase = createClient();
-        const { error: upError } = await supabase.storage.from("products").upload(path, blob, { contentType: "image/webp" });
-        if (upError) throw upError;
-        update({ imageUrl: supabase.storage.from("products").getPublicUrl(path).data.publicUrl });
+      const r = await uploadCatalogImage(file);
+      if (r.url) {
+        update({ imageUrl: r.url });
         toast.success("Foto cargada. Guarda el producto para aplicarla.");
-      } catch {
-        toast.error("No se pudo subir la foto. Intenta con otra imagen.");
-      }
+      } else toast.error(r.error ?? "No se pudo subir la foto.");
     });
   };
 
@@ -144,42 +158,14 @@ export function ProductEditor({
     <form {...v.formProps(submit)} className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-6">
         <Panel title="Información" description="Lo que ve el cliente en el menú.">
-          <div className="grid gap-5 md:grid-cols-[180px_1fr]">
+          <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
             <div>
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="group relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#1F4D36]/15 bg-[#F8F7F2] transition-colors hover:border-[#8BC34A]"
-              >
-                {p.imageUrl ? (
-                  <Image src={p.imageUrl} alt="" fill sizes="180px" className="object-contain p-3" />
-                ) : (
-                  <span className="flex flex-col items-center gap-1 text-xs text-[#1B1B1B]/45">
-                    <ImagePlus className="h-6 w-6" /> Subir foto
-                  </span>
-                )}
-                {uploading && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-white/70">
-                    <Loader2 className="h-6 w-6 animate-spin text-[#1F4D36]" />
-                  </span>
-                )}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  upload(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
+              <ProductImagePicker
+                value={p.imageUrl}
+                uploading={uploading}
+                onUpload={upload}
+                onChange={(imageUrl) => update({ imageUrl })}
               />
-              {p.imageUrl && (
-                <button type="button" onClick={() => update({ imageUrl: null })} className="mt-2 w-full text-xs text-[#1B1B1B]/45 hover:text-red-700">
-                  Quitar foto
-                </button>
-              )}
-              <p className="mt-2 text-[11px] leading-snug text-[#1B1B1B]/40">PNG con fondo transparente se ve mejor.</p>
             </div>
 
             <div className="space-y-4">
@@ -342,6 +328,16 @@ export function ProductEditor({
             )}
           </Panel>
         )}
+
+        <ProductNutritionPanel
+          mode={p.nutritionMode}
+          auto={computed.nutrition}
+          manual={p.nutritionManual}
+          allergens={computed.allergens}
+          tags={p.dietaryTags}
+          isBuilder={isBuilder}
+          onChange={update}
+        />
       </div>
 
       {/* Precio */}
@@ -404,43 +400,69 @@ export function ProductEditor({
               </div>
             </Field>
 
-            {!isBuilder && cost > 0 && price > 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[#1B1B1B]/55">Margen real</span>
-                <span className="flex items-center gap-2">
-                  <span className="text-xs text-[#1B1B1B]/40">costo {formatPercent(cost / price)}</span>
-                  <StatusBadge tone={marginTone}>{formatPercent(margin)}</StatusBadge>
-                </span>
-              </div>
+            {!isBuilder && price > 0 && (
+              cost > 0 ? (
+                <div
+                  className={cn(
+                    "rounded-2xl border p-3",
+                    marginTone === "green" && "border-[#8BC34A]/40 bg-[#F4F8F2]",
+                    marginTone === "amber" && "border-amber-200 bg-amber-50/60",
+                    marginTone === "red" && "border-red-200 bg-red-50/60"
+                  )}
+                >
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-[#1B1B1B]/50">Utilidad por plato</p>
+                      <p
+                        className={cn(
+                          "font-display text-2xl font-bold",
+                          profit < 0 ? "text-red-700" : marginTone === "amber" ? "text-amber-700" : "text-[#1F4D36]"
+                        )}
+                      >
+                        {formatPrice(profit)}
+                      </p>
+                    </div>
+                    <StatusBadge tone={marginTone}>Margen {formatPercent(margin)}</StatusBadge>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-[#1B1B1B]/50">
+                    {formatPrice(price)} de venta − {formatPrice(cost)} de costo ({formatPercent(cost / price)} del precio)
+                  </p>
+                  {cost / price < 0.1 && (
+                    <p className="mt-2 rounded-xl bg-amber-100/70 px-2.5 py-1.5 text-[11px] font-medium text-amber-800">
+                      El costo es menos del 10 % del precio. Revisa que la receta tenga todos los ingredientes.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="rounded-2xl bg-[#F8F7F2] p-3 text-xs text-[#1B1B1B]/50">Agrega la receta para calcular la utilidad.</p>
+              )
             )}
           </div>
         </Panel>
 
-        <Panel title="En los planes" description={`Cada porción cuenta mínimo ${formatPrice(base)} (valor base).`}>
-          <div className="mb-3 flex items-center justify-between rounded-2xl bg-[#F8F7F2] px-3 py-2.5 text-sm">
-            <span className="text-[#1B1B1B]/60">Extra sobre la base</span>
-            <span className={extra ? "font-display font-bold text-amber-700" : "font-semibold text-[#2E6B1F]"}>
-              {extra ? `+${formatPrice(extra)}` : "Sin extra"}
-            </span>
-          </div>
+        <Panel title="Precio en los planes" description="Lo que paga el cliente por este plato en cada plan, con el descuento.">
           {plans.length > 0 ? (
-            <dl className="space-y-1.5 text-sm">
+            <dl className="space-y-2.5 text-sm">
               {plans.map((plan) => (
                 <div key={plan.id} className="flex items-center justify-between px-1">
                   <dt className="text-[#1B1B1B]/60">
                     {plan.name}
                     <span className="ml-1 text-xs text-[#1B1B1B]/40">−{formatPercent(plan.discount)}</span>
                   </dt>
-                  <dd className="font-semibold text-[#1F4D36]">{formatPrice(Math.round(countsAs * (1 - plan.discount)))}</dd>
+                  <dd className="text-right">
+                    <span className="font-semibold text-[#1F4D36]">{formatPrice(Math.round(countsAs * (1 - plan.discount)))}</span>
+                    {!isBuilder && cost > 0 && (
+                      <span className={cn("block text-[11px]", Math.round(countsAs * (1 - plan.discount)) - cost < 0 ? "text-red-700" : "text-[#1B1B1B]/45")}>
+                        utilidad {formatPrice(Math.round(countsAs * (1 - plan.discount)) - cost)}
+                      </span>
+                    )}
+                  </dd>
                 </div>
               ))}
             </dl>
           ) : (
             <p className="text-xs text-[#1B1B1B]/45">No hay planes activos.</p>
           )}
-          <p className="mt-3 text-[11px] leading-snug text-[#1B1B1B]/40">
-            Lo que paga el cliente por este plato dentro de cada plan, ya con el descuento.
-          </p>
         </Panel>
 
         <Button className="w-full" size="lg" type="submit" disabled={saving || uploading}>

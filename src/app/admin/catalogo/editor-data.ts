@@ -14,13 +14,15 @@ export async function loadEditorData() {
     categories,
     ingredientCategories,
     plans: plans.filter((p) => p.active),
-    ingredients: ingredients.map(({ id, name, category, unit, cost_per_unit, active }) => ({
+    ingredients: ingredients.map(({ id, name, category, unit, cost_per_unit, active, nutrition, allergens }) => ({
       id,
       name,
       category,
       unit,
       cost_per_unit,
       active,
+      nutrition,
+      allergens,
     })),
   };
 }

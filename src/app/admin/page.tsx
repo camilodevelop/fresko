@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   Boxes,
+  Package,
   ChefHat,
   MapPin,
   Salad,
@@ -24,6 +25,7 @@ const ICONS: Partial<Record<NavIcon, LucideIcon>> = {
   truck: Truck,
   salad: Salad,
   boxes: Boxes,
+  package: Package,
   map: MapPin,
   users: Users,
   shield: Shield,
@@ -42,7 +44,8 @@ export default async function AdminHomePage() {
   const supabase = await createClient();
   const can = (p: string) => session.permissions.has(p);
 
-  const [users, clients, zones, cities, ingredients] = await Promise.all([
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+  const [users, clients, zones, cities, ingredients, ordersToday] = await Promise.all([
     can("users.manage") ? supabase.from("profiles").select("id", { count: "exact", head: true }) : null,
     can("users.manage")
       ? supabase.from("user_roles").select("user_id, roles!inner(key)", { count: "exact", head: true }).eq("roles.key", "cliente")
@@ -50,7 +53,11 @@ export default async function AdminHomePage() {
     can("zones.manage") ? supabase.from("zones").select("id", { count: "exact", head: true }).eq("active", true) : null,
     can("zones.manage") ? supabase.from("cities").select("id", { count: "exact", head: true }).eq("active", true) : null,
     can("inventory.view") ? supabase.from("ingredients").select("stock, min_stock").eq("active", true) : null,
+    can("orders.view")
+      ? supabase.from("orders").select("status").eq("delivery_date", today).not("status", "in", "(pendiente_pago,cancelado)")
+      : null,
   ]);
+  const pendingToday = ordersToday?.data?.filter((o) => o.status !== "entregado").length ?? 0;
   const lowStock = ingredients?.data?.filter((i) => Number(i.min_stock) > 0 && Number(i.stock) < Number(i.min_stock)).length;
 
 
@@ -73,8 +80,19 @@ export default async function AdminHomePage() {
         }
       />
 
-      {(users || zones || ingredients) && (
+      {(users || zones || ingredients || ordersToday) && (
         <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {ordersToday && (
+            <Link href="/admin/pedidos?vista=hoy" className="block">
+              <StatCard
+                icon={Package}
+                label="Pedidos para hoy"
+                value={ordersToday.data?.length ?? 0}
+                hint={pendingToday ? `${pendingToday} por entregar` : "Todo entregado"}
+                tone="fresh"
+              />
+            </Link>
+          )}
           {users && (
             <StatCard icon={UserRound} label="Usuarios registrados" value={users.count ?? 0} hint="Clientes y personal" tone="dark" />
           )}

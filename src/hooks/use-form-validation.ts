@@ -6,8 +6,8 @@ import { clean, type Errors } from "@/lib/validation";
 type Values = Record<string, unknown>;
 
 /** Lee los valores de un <form> por `name` (para formularios no controlados). */
-function readForm(form: HTMLFormElement | null): Values {
-  if (!form) return {};
+function readForm(form: HTMLElement | null): Values {
+  if (!(form instanceof HTMLFormElement)) return {};
   const data = new FormData(form);
   const values: Values = {};
   for (const [k, v] of data.entries()) values[k] = typeof v === "string" ? v : v.name;
@@ -31,7 +31,7 @@ export function useFormValidation<V extends Values = Values>(
   prefix = "f"
 ) {
   // Callback ref en estado (no useRef) para poder usarla sin leer refs durante el render.
-  const [form, setForm] = useState<HTMLFormElement | null>(null);
+  const [form, setForm] = useState<HTMLElement | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -61,6 +61,7 @@ export function useFormValidation<V extends Values = Values>(
   const formProps = (onValid?: () => void) => ({
     ref: setForm,
     noValidate: true,
+    "data-validation-root": "",
     onSubmit: (e: React.FormEvent<HTMLFormElement>) => {
       setSubmitted(true);
       const result = run();
@@ -71,7 +72,8 @@ export function useFormValidation<V extends Values = Values>(
     },
     onBlur: (e: React.FocusEvent<HTMLFormElement>) => {
       const name = (e.target as unknown as HTMLInputElement).name;
-      if (!name) return;
+      // Ignora campos de otro formulario anidado en el árbol de React.
+      if (!name || !(e.target as HTMLElement).closest("[data-validation-root]")?.isSameNode(latest.current.form)) return;
       setTouched((t) => (t[name] ? t : { ...t, [name]: true }));
       run();
     },
@@ -81,6 +83,33 @@ export function useFormValidation<V extends Values = Values>(
       if (name && (errors[name] || submitted)) requestAnimationFrame(run);
     },
   });
+
+  /**
+   * Para contenedores que NO son <form> (p. ej. cuando adentro hay otro formulario,
+   * porque HTML no permite anidarlos). Se valida con `submit(onValid)` desde un botón.
+   */
+  const containerProps = () => ({
+    ref: setForm,
+    onBlur: (e: React.FocusEvent<HTMLElement>) => {
+      const name = (e.target as unknown as HTMLInputElement).name;
+      if (!name || !(e.target as HTMLElement).closest("[data-validation-root]")?.isSameNode(latest.current.form)) return;
+      setTouched((t) => (t[name] ? t : { ...t, [name]: true }));
+      run();
+    },
+    onChange: (e: React.FormEvent<HTMLElement>) => {
+      const name = (e.target as unknown as HTMLInputElement).name;
+      if (name && (errors[name] || submitted)) requestAnimationFrame(run);
+    },
+    "data-validation-root": "",
+  });
+
+  /** Valida todo y, si está bien, ejecuta `onValid` (botón de un contenedor sin <form>). */
+  const submit = (onValid: () => void) => {
+    setSubmitted(true);
+    const result = run();
+    if (Object.keys(result).length > 0) focusFirst();
+    else onValid();
+  };
 
   /** id del control (para <Field name={v.idFor(...)}> y el mensaje de error). */
   const idFor = (name: string) => `${prefix}-${name}`;
@@ -113,9 +142,10 @@ export function useFormValidation<V extends Values = Values>(
 
   /** Limpia los valores del formulario (no controlado) y sus errores. */
   const resetForm = () => {
-    latest.current.form?.reset();
+    const el = latest.current.form;
+    if (el instanceof HTMLFormElement) el.reset();
     reset();
   };
 
-  return { formProps, field, idFor, error: visible, errors, check, reset, resetForm, revalidate: run };
+  return { formProps, containerProps, submit, field, idFor, error: visible, errors, check, reset, resetForm, revalidate: run };
 }

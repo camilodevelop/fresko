@@ -77,3 +77,22 @@ textarea[aria-invalid="true"]:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgb(248 113 113 / 0.25) !important;
 }
+
+/* Barra de desplazamiento delgada para listas dentro de tarjetas oscuras. */
+.scroll-dark {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.28) transparent;
+}
+.scroll-dark::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-dark::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.28);
+  border-radius: 9999px;
+}
+.scroll-dark::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 0.45);
+}

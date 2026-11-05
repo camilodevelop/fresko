@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ProductEditor } from "@/components/catalog/ProductEditor";
 import { createClient } from "@/lib/supabase/server";
 import { loadEditorData } from "../editor-data";
+import { EMPTY_NUTRITION, parseNutrition } from "@/lib/nutrition";
 
 export default async function EditarProductoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,7 +11,7 @@ export default async function EditarProductoPage({ params }: { params: Promise<{
   const [{ data: product }, { ingredients, settings, categories, ingredientCategories, plans }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, category_id, kind, description, tag, image_url, price, target_margin, featured, active, recipe_items(ingredient_id, quantity)")
+      .select("id, name, category_id, kind, description, tag, image_url, price, target_margin, featured, active, nutrition_mode, nutrition_manual, dietary_tags, recipe_items(ingredient_id, quantity)")
       .eq("id", id)
       .maybeSingle(),
     loadEditorData(),
@@ -36,6 +37,9 @@ export default async function EditarProductoPage({ params }: { params: Promise<{
         targetMargin: product.target_margin !== null ? Number(product.target_margin) : null,
         featured: product.featured,
         active: product.active,
+        nutritionMode: product.nutrition_mode === "manual" ? "manual" : "auto",
+        nutritionManual: parseNutrition(product.nutrition_manual) ?? EMPTY_NUTRITION,
+        dietaryTags: product.dietary_tags,
         recipe: product.recipe_items.map((r) => ({ ingredientId: r.ingredient_id, quantity: Number(r.quantity) })),
       }}
     />

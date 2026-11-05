@@ -4,8 +4,13 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
+import Link from "next/link";
+import { Field, FieldError } from "@/components/ui/field";
+import { LEGAL_VERSIONS } from "@/lib/legal";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { DEFAULT_PHONE_COUNTRY, isValidPhone, toE164, type PhoneValue } from "@/lib/phone";
 import { useFormValidation } from "@/hooks/use-form-validation";
 import { first, rules } from "@/lib/validation";
 import { createClient } from "@/lib/supabase/client";
@@ -38,6 +43,9 @@ export function LoginForm() {
   const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState<PhoneValue>({ country: DEFAULT_PHONE_COUNTRY, number: "" });
+  const [acceptLegal, setAcceptLegal] = useState(false);
+  const [marketing, setMarketing] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(
     !supabaseConfigured
@@ -52,13 +60,25 @@ export function LoginForm() {
   const v = useFormValidation(
     () => ({
       full_name: mode === "register" ? rules.required(name, "Escribe tu nombre.") : null,
+      phone:
+        mode === "register"
+          ? !phone.number.trim()
+            ? "Escribe tu celular para coordinar las entregas."
+            : !isValidPhone(phone)
+              ? "Ese número no es válido para el país elegido."
+              : null
+          : null,
       email: first(rules.required(email, "Escribe tu correo."), rules.email(email)),
       password:
         mode === "register"
           ? first(rules.required(password, "Crea una contraseña."), rules.minLength(password, 8, "Usa al menos 8 caracteres."))
           : rules.required(password, "Escribe tu contraseña."),
+      legal:
+        mode === "register" && !acceptLegal
+          ? "Para crear tu cuenta debes aceptar los términos y autorizar el tratamiento de tus datos."
+          : null,
     }),
-    () => ({ name, email, password }),
+    () => ({ name, email, password, phone, acceptLegal }),
     "login"
   );
 
@@ -83,7 +103,14 @@ export function LoginForm() {
             email: email.trim(),
             password,
             options: {
-              data: { full_name: name.trim() },
+              data: {
+                full_name: name.trim(),
+                phone: toE164(phone),
+                terms_version: LEGAL_VERSIONS.terminos,
+                privacy_version: LEGAL_VERSIONS.privacidad,
+                marketing,
+                user_agent: navigator.userAgent.slice(0, 300),
+              },
               emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
             },
           });
@@ -172,6 +199,18 @@ export function LoginForm() {
             />
           </Field>
         )}
+        {mode === "register" && (
+          <Field name={v.idFor("phone")} error={v.error("phone")} hint="Te escribimos por aquí si hay novedades con tu entrega.">
+            <PhoneInput
+              value={phone}
+              onChange={(value) => {
+                setPhone(value);
+                if (v.error("phone")) requestAnimationFrame(v.revalidate);
+              }}
+              inputProps={{ ...v.field("phone"), "aria-label": "Celular" }}
+            />
+          </Field>
+        )}
         <Field name={v.idFor("email")} error={v.error("email")}>
           <Input
             {...v.field("email")}
@@ -188,15 +227,55 @@ export function LoginForm() {
           error={v.error("password")}
           hint={mode === "register" ? "Mínimo 8 caracteres." : undefined}
         >
-          <Input
+          <PasswordInput
             {...v.field("password")}
-            type="password"
             placeholder="Contraseña"
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
+
+        {mode === "register" && (
+          <div className="space-y-3 rounded-2xl bg-[#F8F7F2] p-4">
+            <label className="flex items-start gap-3 text-[13px] leading-snug text-[#1B1B1B]/75">
+              <input
+                type="checkbox"
+                name="legal"
+                id={v.idFor("legal")}
+                checked={acceptLegal}
+                aria-invalid={v.error("legal") ? true : undefined}
+                aria-describedby={v.error("legal") ? `${v.idFor("legal")}-error` : undefined}
+                onChange={(e) => {
+                  setAcceptLegal(e.target.checked);
+                  requestAnimationFrame(v.revalidate);
+                }}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#1F4D36]"
+              />
+              <span>
+                Acepto los{" "}
+                <Link href="/legal/terminos" target="_blank" className="font-semibold text-[#1F4D36] underline">
+                  Términos y condiciones
+                </Link>{" "}
+                y autorizo el tratamiento de mis datos personales según la{" "}
+                <Link href="/legal/privacidad" target="_blank" className="font-semibold text-[#1F4D36] underline">
+                  Política de tratamiento de datos
+                </Link>
+                .
+              </span>
+            </label>
+            <FieldError name={v.idFor("legal")} error={v.error("legal")} className="mt-0" />
+            <label className="flex items-start gap-3 text-[13px] leading-snug text-[#1B1B1B]/60">
+              <input
+                type="checkbox"
+                checked={marketing}
+                onChange={(e) => setMarketing(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#1F4D36]"
+              />
+              <span>Quiero recibir novedades y promociones por correo o WhatsApp (opcional, puedes cambiarlo cuando quieras).</span>
+            </label>
+          </div>
+        )}
 
         {error && (
           <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">

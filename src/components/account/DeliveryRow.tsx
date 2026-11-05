@@ -1,42 +1,35 @@
-import { Lock, Pencil, Sparkles } from "lucide-react";
-import { StatusBadge } from "@/components/dashboard/ui";
-import { DELIVERY_STATUS, dayParts, type PreviewDelivery } from "@/lib/data/account-preview";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
+import type { UpcomingDelivery } from "@/lib/account";
 
-export function DeliveryRow({ delivery }: { delivery: PreviewDelivery }) {
+function dayParts(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d, 12));
+  const f = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("es-CO", { ...o, timeZone: "UTC" }).format(date).replace(".", "");
+  return { weekday: f({ weekday: "short" }), day: d, month: f({ month: "short" }) };
+}
+
+export function DeliveryRow({ delivery }: { delivery: UpcomingDelivery }) {
   const day = dayParts(delivery.date);
-  const status = DELIVERY_STATUS[delivery.status];
   return (
-    <li className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
-      <div className="flex w-14 shrink-0 flex-col items-center rounded-2xl bg-[#F4F8F2] py-2 text-[#1F4D36]">
-        <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">{day.weekday}</span>
-        <span className="font-display text-xl font-bold leading-none">{day.day}</span>
-        <span className="text-[10px] font-semibold uppercase opacity-60">{day.month}</span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-semibold text-[#1F4D36]">{delivery.slot}</p>
-          <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+    <li>
+      <Link href={`/cuenta/pedidos/${delivery.code}`} className="flex items-center gap-4 py-4 transition-colors hover:bg-[#F8F7F2]/60">
+        <div className="flex w-14 shrink-0 flex-col items-center rounded-2xl bg-[#F4F8F2] py-2 text-[#1F4D36]">
+          <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">{day.weekday}</span>
+          <span className="font-display text-xl font-bold leading-none">{day.day}</span>
+          <span className="text-[10px] font-semibold uppercase opacity-60">{day.month}</span>
         </div>
-        <p className="mt-1 truncate text-sm text-[#1B1B1B]/55">
-          {delivery.items.map((item, i) => (
-            <span key={i}>
-              {i > 0 && " · "}
-              {item.qty > 1 && `${item.qty}× `}
-              {item.name}
-              {item.premium && <Sparkles className="ml-1 inline h-3 w-3 text-amber-500" aria-label="Premium" />}
-            </span>
-          ))}
-        </p>
-      </div>
-      {delivery.editable ? (
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#1F4D36]/15 px-3 py-1.5 text-xs font-semibold text-[#1F4D36]">
-          <Pencil className="h-3 w-3" /> Cambiar
-        </span>
-      ) : (
-        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-[#1B1B1B]/40" title="Pasó la hora de corte">
-          <Lock className="h-3 w-3" /> Cerrada
-        </span>
-      )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-[#1F4D36]">{delivery.slot}</p>
+            <OrderStatusBadge status={delivery.status} />
+          </div>
+          <p className="mt-1 truncate text-sm text-[#1B1B1B]/55">{delivery.summary}</p>
+          <p className="text-xs text-[#1B1B1B]/40">{delivery.code}</p>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-[#1B1B1B]/25" />
+      </Link>
     </li>
   );
 }

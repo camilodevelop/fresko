@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { BowlBuilderContent } from "@/components/bowl-builder/BowlBuilderContent";
 import { getBuilderConfig } from "@/lib/data/catalog";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Arma tu bowl | FRESKO — Personaliza tu ensalada en Bogotá",
@@ -21,6 +19,7 @@ export default async function ArmaTuBowlPage({
   const { producto } = await searchParams;
   const config = await getBuilderConfig(producto);
   const title = config.product?.name ?? "Arma tu bowl";
+  // Un solo armador: el producto "Arma tu bowl" (o el que se indique con ?producto=).
   return (
     <>
       <Navbar />
@@ -47,26 +46,6 @@ export default async function ArmaTuBowlPage({
 
         <section className="relative py-10 sm:py-14">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {config.products.length > 1 && (
-              <div className="mb-8 flex flex-wrap gap-2" role="tablist" aria-label="¿Qué quieres armar?">
-                {config.products.map((p) => (
-                  <Link
-                    key={p.slug}
-                    href={`/arma-tu-bowl?producto=${p.slug}`}
-                    role="tab"
-                    aria-selected={p.slug === config.product?.slug}
-                    className={cn(
-                      "rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all",
-                      p.slug === config.product?.slug
-                        ? "bg-[#1F4D36] text-white shadow-md"
-                        : "bg-white text-[#1F4D36]/70 hover:bg-[#1F4D36]/5"
-                    )}
-                  >
-                    {p.name}
-                  </Link>
-                ))}
-              </div>
-            )}
             {config.product ? (
               <BowlBuilderContent
                 key={config.product.slug}

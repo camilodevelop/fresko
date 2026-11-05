@@ -23,16 +23,42 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "builder_options": {
+            "addresses": {
                   Row: {
-                    "active": boolean,"created_at": string,"emoji": string,"id": string,"ingredient_id": string | null,"layer": NonNullable<Json>,"name": string,"price": number,"quantity": number,"sort": number,"step": string
+                    "address": string,"created_at": string,"details": string,"id": string,"is_default": boolean,"label": string,"lat": number,"lng": number,"updated_at": string,"user_id": string,"zone_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"created_at"?: string,"emoji"?: string,"id"?: string,"ingredient_id"?: string | null,"layer"?: NonNullable<Json>,"name": string,"price"?: number,"quantity"?: number,"sort"?: number,"step": string
+                    "address": string,"created_at"?: string,"details"?: string,"id"?: string,"is_default"?: boolean,"label"?: string,"lat": number,"lng": number,"updated_at"?: string,"user_id"?: string,"zone_id"?: string | null
                   }
                   Update: {
-                    "active"?: boolean,"created_at"?: string,"emoji"?: string,"id"?: string,"ingredient_id"?: string | null,"layer"?: NonNullable<Json>,"name"?: string,"price"?: number,"quantity"?: number,"sort"?: number,"step"?: string
+                    "address"?: string,"created_at"?: string,"details"?: string,"id"?: string,"is_default"?: boolean,"label"?: string,"lat"?: number,"lng"?: number,"updated_at"?: string,"user_id"?: string,"zone_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "addresses_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "addresses_zone_id_fkey"
+      columns: ["zone_id"]
+isOneToOne: false
+      referencedRelation: "zones"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"builder_options": {
+                  Row: {
+                    "active": boolean,"allergens": (string)[],"created_at": string,"emoji": string,"id": string,"image_url": string | null,"ingredient_id": string | null,"layer": NonNullable<Json>,"name": string,"nutrition": NonNullable<Json>,"price": number,"quantity": number,"sort": number,"step": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active"?: boolean,"allergens"?: (string)[],"created_at"?: string,"emoji"?: string,"id"?: string,"image_url"?: string | null,"ingredient_id"?: string | null,"layer"?: NonNullable<Json>,"name": string,"nutrition"?: NonNullable<Json>,"price"?: number,"quantity"?: number,"sort"?: number,"step": string
+                  }
+                  Update: {
+                    "active"?: boolean,"allergens"?: (string)[],"created_at"?: string,"emoji"?: string,"id"?: string,"image_url"?: string | null,"ingredient_id"?: string | null,"layer"?: NonNullable<Json>,"name"?: string,"nutrition"?: NonNullable<Json>,"price"?: number,"quantity"?: number,"sort"?: number,"step"?: string
                   }
                   Relationships: [
                     {
@@ -113,14 +139,14 @@ isOneToOne: false
                   ]
                 },"ingredients": {
                   Row: {
-                    "active": boolean,"category_id": string,"cost_per_unit": number,"created_at": string,"id": string,"min_stock": number,"name": string,"stock": number,"unit": string,"updated_at": string
+                    "active": boolean,"allergens": (string)[],"carbs": number,"category_id": string,"cost_per_unit": number,"created_at": string,"fat": number,"fiber": number,"id": string,"image_url": string | null,"kcal": number,"min_stock": number,"name": string,"protein": number,"stock": number,"unit": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"category_id": string,"cost_per_unit"?: number,"created_at"?: string,"id"?: string,"min_stock"?: number,"name": string,"stock"?: number,"unit": string,"updated_at"?: string
+                    "active"?: boolean,"allergens"?: (string)[],"carbs"?: number,"category_id": string,"cost_per_unit"?: number,"created_at"?: string,"fat"?: number,"fiber"?: number,"id"?: string,"image_url"?: string | null,"kcal"?: number,"min_stock"?: number,"name": string,"protein"?: number,"stock"?: number,"unit": string,"updated_at"?: string
                   }
                   Update: {
-                    "active"?: boolean,"category_id"?: string,"cost_per_unit"?: number,"created_at"?: string,"id"?: string,"min_stock"?: number,"name"?: string,"stock"?: number,"unit"?: string,"updated_at"?: string
+                    "active"?: boolean,"allergens"?: (string)[],"carbs"?: number,"category_id"?: string,"cost_per_unit"?: number,"created_at"?: string,"fat"?: number,"fiber"?: number,"id"?: string,"image_url"?: string | null,"kcal"?: number,"min_stock"?: number,"name"?: string,"protein"?: number,"stock"?: number,"unit"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -177,6 +203,122 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"order_events": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"note": string,"order_id": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"note"?: string,"order_id": string,"status": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"note"?: string,"order_id"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_events_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_events_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"order_items": {
+                  Row: {
+                    "id": string,"line_total": number,"name": string,"options": NonNullable<Json>,"order_id": string,"product_id": string | null,"quantity": number,"unit_price": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"line_total": number,"name": string,"options"?: NonNullable<Json>,"order_id": string,"product_id"?: string | null,"quantity": number,"unit_price": number
+                  }
+                  Update: {
+                    "id"?: string,"line_total"?: number,"name"?: string,"options"?: NonNullable<Json>,"order_id"?: string,"product_id"?: string | null,"quantity"?: number,"unit_price"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "product_costs"
+      referencedColumns: ["product_id"]
+    },{
+      foreignKeyName: "order_items_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"orders": {
+                  Row: {
+                    "address_id": string | null,"address_snapshot": NonNullable<Json>,"cancelled_at": string | null,"code": string,"contact_name": string,"contact_phone": string,"created_at": string,"delivery_date": string,"delivery_fee": number,"id": string,"kind": string,"notes": string,"paid_at": string | null,"payment_status": string,"slot_id": string,"slot_label": string,"status": string,"subtotal": number,"total": number,"updated_at": string,"user_id": string,"zone_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "address_id"?: string | null,"address_snapshot": NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivery_date": string,"delivery_fee"?: number,"id"?: string,"kind"?: string,"notes"?: string,"paid_at"?: string | null,"payment_status"?: string,"slot_id": string,"slot_label": string,"status"?: string,"subtotal": number,"total": number,"updated_at"?: string,"user_id": string,"zone_id": string
+                  }
+                  Update: {
+                    "address_id"?: string | null,"address_snapshot"?: NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivery_date"?: string,"delivery_fee"?: number,"id"?: string,"kind"?: string,"notes"?: string,"paid_at"?: string | null,"payment_status"?: string,"slot_id"?: string,"slot_label"?: string,"status"?: string,"subtotal"?: number,"total"?: number,"updated_at"?: string,"user_id"?: string,"zone_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "orders_address_id_fkey"
+      columns: ["address_id"]
+isOneToOne: false
+      referencedRelation: "addresses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_slot_id_fkey"
+      columns: ["slot_id"]
+isOneToOne: false
+      referencedRelation: "delivery_slots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_zone_id_fkey"
+      columns: ["zone_id"]
+isOneToOne: false
+      referencedRelation: "zones"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payments": {
+                  Row: {
+                    "amount": number,"created_at": string,"id": string,"order_id": string,"provider": string,"reference": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount": number,"created_at"?: string,"id"?: string,"order_id": string,"provider"?: string,"reference"?: string,"status": string
+                  }
+                  Update: {
+                    "amount"?: number,"created_at"?: string,"id"?: string,"order_id"?: string,"provider"?: string,"reference"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payments_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"permissions": {
                   Row: {
                     "description": string,"key": string,"module": string
@@ -207,14 +349,14 @@ isOneToOne: false
                   ]
                 },"products": {
                   Row: {
-                    "active": boolean,"category_id": string,"created_at": string,"description": string,"featured": boolean,"id": string,"image_url": string | null,"kind": string,"name": string,"price": number,"slug": string,"sort": number,"tag": string | null,"target_margin": number | null,"updated_at": string
+                    "active": boolean,"allergens": (string)[],"category_id": string,"created_at": string,"description": string,"dietary_tags": (string)[],"featured": boolean,"id": string,"image_url": string | null,"kind": string,"name": string,"nutrition": NonNullable<Json>,"nutrition_manual": NonNullable<Json>,"nutrition_mode": string,"price": number,"slug": string,"sort": number,"tag": string | null,"target_margin": number | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"category_id": string,"created_at"?: string,"description"?: string,"featured"?: boolean,"id"?: string,"image_url"?: string | null,"kind"?: string,"name": string,"price"?: number,"slug": string,"sort"?: number,"tag"?: string | null,"target_margin"?: number | null,"updated_at"?: string
+                    "active"?: boolean,"allergens"?: (string)[],"category_id": string,"created_at"?: string,"description"?: string,"dietary_tags"?: (string)[],"featured"?: boolean,"id"?: string,"image_url"?: string | null,"kind"?: string,"name": string,"nutrition"?: NonNullable<Json>,"nutrition_manual"?: NonNullable<Json>,"nutrition_mode"?: string,"price"?: number,"slug": string,"sort"?: number,"tag"?: string | null,"target_margin"?: number | null,"updated_at"?: string
                   }
                   Update: {
-                    "active"?: boolean,"category_id"?: string,"created_at"?: string,"description"?: string,"featured"?: boolean,"id"?: string,"image_url"?: string | null,"kind"?: string,"name"?: string,"price"?: number,"slug"?: string,"sort"?: number,"tag"?: string | null,"target_margin"?: number | null,"updated_at"?: string
+                    "active"?: boolean,"allergens"?: (string)[],"category_id"?: string,"created_at"?: string,"description"?: string,"dietary_tags"?: (string)[],"featured"?: boolean,"id"?: string,"image_url"?: string | null,"kind"?: string,"name"?: string,"nutrition"?: NonNullable<Json>,"nutrition_manual"?: NonNullable<Json>,"nutrition_mode"?: string,"price"?: number,"slug"?: string,"sort"?: number,"tag"?: string | null,"target_margin"?: number | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -227,14 +369,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "avatar_url": string | null,"created_at": string,"email": string | null,"full_name": string,"id": string,"phone": string | null,"updated_at": string
+                    "avatar_url": string | null,"created_at": string,"email": string | null,"full_name": string,"id": string,"marketing_opt_in": boolean,"phone": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "avatar_url"?: string | null,"created_at"?: string,"email"?: string | null,"full_name"?: string,"id": string,"phone"?: string | null,"updated_at"?: string
+                    "avatar_url"?: string | null,"created_at"?: string,"email"?: string | null,"full_name"?: string,"id": string,"marketing_opt_in"?: boolean,"phone"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "avatar_url"?: string | null,"created_at"?: string,"email"?: string | null,"full_name"?: string,"id"?: string,"phone"?: string | null,"updated_at"?: string
+                    "avatar_url"?: string | null,"created_at"?: string,"email"?: string | null,"full_name"?: string,"id"?: string,"marketing_opt_in"?: boolean,"phone"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -339,6 +481,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"user_consents": {
+                  Row: {
+                    "accepted": boolean,"created_at": string,"document": string,"id": string,"ip": string | null,"method": string,"user_agent": string | null,"user_id": string,"version": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted"?: boolean,"created_at"?: string,"document": string,"id"?: string,"ip"?: string | null,"method": string,"user_agent"?: string | null,"user_id"?: string,"version": string
+                  }
+                  Update: {
+                    "accepted"?: boolean,"created_at"?: string,"document"?: string,"id"?: string,"ip"?: string | null,"method"?: string,"user_agent"?: string | null,"user_id"?: string,"version"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_consents_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"user_roles": {
                   Row: {
                     "created_at": string,"role_id": string,"user_id": string
@@ -399,7 +561,13 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "has_permission":
+            "cancel_my_order":
+{ Args: { "p_order_id": string }; Returns: undefined
+                           },
+"delivery_date_allowed":
+{ Args: { "p_date": string,"p_zone_id": string }; Returns: boolean
+                           },
+"has_permission":
 { Args: { "perm": string }; Returns: boolean
                            },
 "is_staff_role":
@@ -407,6 +575,26 @@ isOneToOne: false
                            },
 "my_permissions":
 { Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"notify_permission":
+{ Args: { "p_body": string,"p_href": string,"p_kind": string,"p_title": string,"perm": string }; Returns: undefined
+                           },
+"pay_order_simulated":
+{ Args: { "p_approve": boolean,"p_order_id": string }; Returns: string
+                           },
+"place_order":
+{ Args: { "p_address_id": string,"p_date": string,"p_items": Json,"p_notes"?: string,"p_slot_id": string }; Returns: {
+              "order_code": string,"order_id": string
+            }[]
+                           },
+"recompute_nutrition":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"set_order_status":
+{ Args: { "p_note"?: string,"p_order_id": string,"p_status": string }; Returns: undefined
+                           },
+"sync_builder_option_images":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "zone_for_point":
 { Args: { "lat": number,"lng": number }; Returns: {

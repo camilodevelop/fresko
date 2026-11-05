@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { FALLBACK_PRODUCT_IMAGE, isCutoutImage } from "@/lib/product-image";
 import Link from "next/link";
 import { Plus, Salad } from "lucide-react";
 import { CategoriesManager } from "@/components/catalog/CategoriesManager";
@@ -136,7 +137,7 @@ export default async function CatalogoPage({
                     <td className="px-6 py-3">
                       <Link href={`/admin/catalogo/${p.id}`} className="group flex items-center gap-3">
                         <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-[#F4F8F2]">
-                          <Image src={p.image_url || "/images/bowl.png"} alt="" fill sizes="44px" className="object-contain p-1" />
+                          <Image src={p.image_url || FALLBACK_PRODUCT_IMAGE} alt="" fill sizes="44px" className={isCutoutImage(p.image_url) ? "object-contain p-1" : "object-cover"} />
                         </span>
                         <span className="min-w-0">
                           <span className="block truncate font-semibold text-[#1F4D36] group-hover:underline">{p.name}</span>

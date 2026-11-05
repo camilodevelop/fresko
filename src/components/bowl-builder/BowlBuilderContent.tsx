@@ -2,6 +2,7 @@
 
 import { toast } from "@/lib/notify";
 
+import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -15,6 +16,7 @@ import {
   type BuilderStep,
 } from "@/lib/data/builder";
 import { formatPrice, cn } from "@/lib/utils";
+import { allergenLabel, formatGrams, sumNutrition } from "@/lib/nutrition";
 
 type Selections = Record<BuilderStep, string[]>;
 
@@ -74,10 +76,23 @@ export function BowlBuilderContent({
     return options;
   }, [selections, BUILDER_OPTIONS]);
 
+  const parts = useMemo(() => {
+    const result = {} as Record<BuilderStep, BuilderOption[]>;
+    for (const step of BUILDER_STEPS) {
+      result[step.id] = selections[step.id]
+        .map((id) => BUILDER_OPTIONS[step.id].find((o) => o.id === id))
+        .filter((o): o is BuilderOption => Boolean(o));
+    }
+    return result;
+  }, [selections, BUILDER_OPTIONS]);
+
   const totalPrice = useMemo(() => {
     const extras = selectedOptions.reduce((sum, o) => sum + o.price, 0);
     return BASE_BOWL_PRICE + extras;
   }, [selectedOptions, BASE_BOWL_PRICE]);
+
+  const nutrition = useMemo(() => sumNutrition(selectedOptions.map((o) => o.nutrition)), [selectedOptions]);
+  const allergens = useMemo(() => [...new Set(selectedOptions.flatMap((o) => o.allergens))], [selectedOptions]);
 
   const summaryItems = useMemo(() => {
     return BUILDER_STEPS.flatMap((step) =>
@@ -96,6 +111,7 @@ export function BowlBuilderContent({
       price: totalPrice,
       image: "/images/bowl.png",
       details: summaryItems.map((item) => item.name).join(", "),
+      options: selectedOptions.map((o) => o.id),
       unique: true,
     });
     toast.success(`${productName} agregado al carrito`, { description: summaryItems.map((item) => item.name).join(", ") });
@@ -105,7 +121,7 @@ export function BowlBuilderContent({
   return (
     <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
       <div className="lg:col-span-4 lg:sticky lg:top-32 lg:self-start">
-        <BowlPreview layers={selectedOptions} />
+        <BowlPreview parts={parts} />
       </div>
 
       <div className="lg:col-span-5">
@@ -158,15 +174,21 @@ export function BowlBuilderContent({
                       : "border-transparent bg-[#F8F7F2] hover:border-[#1F4D36]/15"
                   )}
                 >
-                  <span className="text-2xl">{option.emoji}</span>
+                  {option.image ? (
+                    <span className="relative h-14 w-14 overflow-hidden rounded-full shadow-sm ring-2 ring-white">
+                      <Image src={option.image} alt="" fill sizes="56px" className="object-cover" />
+                    </span>
+                  ) : (
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-2xl shadow-sm">{option.emoji}</span>
+                  )}
                   <span className="text-center text-xs font-semibold text-[#1F4D36]">
                     {option.name}
                   </span>
-                  {option.price > 0 && (
-                    <span className="text-[10px] text-[#1B1B1B]/50">
-                      +{formatPrice(option.price)}
-                    </span>
-                  )}
+                  <span className="text-[10px] text-[#1B1B1B]/50">
+                    {[option.nutrition ? `${Math.round(option.nutrition.kcal)} kcal` : null, option.price > 0 ? `+${formatPrice(option.price)}` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
                 </motion.button>
               );
             })}
@@ -177,7 +199,7 @@ export function BowlBuilderContent({
       <div className="lg:col-span-3 lg:sticky lg:top-32 lg:self-start">
         <div className="rounded-3xl bg-[#1F4D36] p-6 text-white shadow-xl">
           <h3 className="font-display text-lg font-bold">Tu resumen</h3>
-          <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm">
+          <ul className="scroll-dark -mr-3 mt-4 max-h-52 space-y-2 overflow-y-auto pr-3 text-sm [mask-image:linear-gradient(to_bottom,black_calc(100%-1.5rem),transparent)] [&>li:last-child]:mb-4">
             {summaryItems.length === 0 ? (
               <li className="text-white/50">Aún no has seleccionado nada</li>
             ) : (
@@ -196,6 +218,36 @@ export function BowlBuilderContent({
               ))
             )}
           </ul>
+          {nutrition.kcal > 0 && (
+            <div className="mt-5 rounded-2xl bg-white/[0.07] p-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/55">Nutrición aprox.</span>
+                <span className="font-display text-xl font-bold">
+                  {Math.round(nutrition.kcal)} <span className="text-xs font-semibold text-white/60">kcal</span>
+                </span>
+              </div>
+              <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+                {(
+                  [
+                    ["Proteína", nutrition.protein, "bg-[#C5E1A5]"],
+                    ["Carbos", nutrition.carbs, "bg-[#8BC34A]"],
+                    ["Grasas", nutrition.fat, "bg-[#F2B84B]"],
+                  ] as const
+                ).map(([label, value, dot]) => (
+                  <div key={label}>
+                    <dd className="font-display text-sm font-bold">{formatGrams(value)}</dd>
+                    <dt className="mt-0.5 flex items-center justify-center gap-1 text-[10px] text-white/55">
+                      <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
+                      {label}
+                    </dt>
+                  </div>
+                ))}
+              </dl>
+              {allergens.length > 0 && (
+                <p className="mt-3 text-[11px] text-amber-200/90">Contiene: {allergens.map(allergenLabel).join(", ")}</p>
+              )}
+            </div>
+          )}
           <div className="mt-6 flex items-center justify-between border-t border-white/20 pt-4">
             <span className="font-medium">Total</span>
             <span className="font-display text-2xl font-bold">

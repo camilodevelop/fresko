@@ -27,8 +27,14 @@ function crumbs(pathname: string, homeHref: string, groups: NavGroup[]) {
   if (!match) return [];
   const list: { label: string; href?: string }[] = [{ label: match.label, href: match.href }];
   if (pathname !== match.href) {
-    const segment = pathname.slice(match.href.length + 1).split("/")[0];
-    list.push({ label: SUBSECTIONS[segment] ?? "Detalle" });
+    // Catálogo › Ingredientes › Detalle: cada nivel enlaza salvo el último.
+    const segments = pathname.slice(match.href.length + 1).split("/").filter(Boolean);
+    let href = match.href;
+    segments.forEach((segment, i) => {
+      href += `/${segment}`;
+      const last = i === segments.length - 1;
+      list.push({ label: SUBSECTIONS[segment] ?? "Detalle", href: last ? undefined : href });
+    });
   }
   return list;
 }

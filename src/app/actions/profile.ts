@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient as createPlainClient } from "@supabase/supabase-js";
+import { isValidPhoneNumber } from "libphonenumber-js";
 import { requireSession } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,17 +16,18 @@ function refresh() {
 export async function updateContact(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await requireSession();
   const fullName = String(formData.get("full_name") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").replace(/\D/g, "").replace(/^57(?=3\d{9}$)/, "");
+  const phone = String(formData.get("phone_e164") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
 
   if (!fullName) return { error: "Escribe tu nombre." };
-  if (phone && !/^3\d{9}$/.test(phone)) return { error: "El celular debe tener 10 dígitos y empezar por 3." };
+  if (!phone) return { error: "Escribe un celular válido para el país elegido." };
+  if (!/^\+[1-9]\d{7,14}$/.test(phone) || !isValidPhoneNumber(phone)) return { error: "Ese celular no es válido." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "El correo no es válido." };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name: fullName, phone: phone || null, updated_at: new Date().toISOString() })
+    .update({ full_name: fullName, phone, updated_at: new Date().toISOString() })
     .eq("id", session.userId);
   if (error) return { error: "No se pudo guardar. Intenta de nuevo." };
 

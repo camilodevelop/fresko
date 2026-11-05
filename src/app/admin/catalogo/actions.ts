@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { unitFactor, type Unit } from "@/lib/pricing";
-import type { Json } from "@/lib/supabase/database.types";
+import { ALLERGENS, DIETARY_TAGS, type Nutrition } from "@/lib/nutrition";
 
 export type ActionState = { ok?: string; error?: string };
 
@@ -43,7 +43,12 @@ export type ProductInput = {
   featured: boolean;
   active: boolean;
   recipe: { ingredientId: string; quantity: number }[];
+  nutritionMode: "auto" | "manual";
+  nutritionManual: Nutrition;
+  dietaryTags: string[];
 };
+
+const NUTRIENT_KEYS = ["kcal", "protein", "carbs", "fat", "fiber", "weight"] as const;
 
 export async function saveProduct(input: ProductInput): Promise<ActionState> {
   await requirePermission("catalog.manage");
@@ -63,9 +68,22 @@ export async function saveProduct(input: ProductInput): Promise<ActionState> {
   }
   if (recipe.some((r) => !(r.quantity > 0))) return { error: "Cada ingrediente necesita una cantidad mayor a 0." };
 
+  if (!["auto", "manual"].includes(input.nutritionMode)) return { error: "Modo de nutrición inválido." };
+  const manual: Record<string, number> = {};
+  for (const k of NUTRIENT_KEYS) {
+    const value = Number(input.nutritionManual?.[k] ?? 0);
+    if (!Number.isFinite(value) || value < 0 || value > 10000) return { error: "Revisa los valores nutricionales." };
+    manual[k] = Math.round(value * 10) / 10;
+  }
+  const validTags: string[] = DIETARY_TAGS.map((t) => t.id);
+  const dietaryTags = [...new Set(input.dietaryTags)].filter((t) => validTags.includes(t));
+
   const supabase = await createClient();
   const row = {
     name,
+    nutrition_mode: input.nutritionMode,
+    nutrition_manual: manual,
+    dietary_tags: dietaryTags,
     category_id: input.categoryId,
     kind: input.kind,
     description: input.description.trim(),
@@ -142,6 +160,10 @@ export type IngredientInput = {
   costPerDisplayUnit: number; // por kg, L o unidad
   minStockDisplay: number; // en kg, L o unidad
   active: boolean;
+  imageUrl: string | null;
+  /** Por 100 g / 100 ml, o por unidad. */
+  nutrition: { kcal: number; protein: number; carbs: number; fat: number; fiber: number };
+  allergens: string[];
 };
 
 export async function saveIngredient(input: IngredientInput): Promise<ActionState> {
@@ -153,8 +175,24 @@ export async function saveIngredient(input: IngredientInput): Promise<ActionStat
   if (!(input.costPerDisplayUnit >= 0)) return { error: "El costo no puede ser negativo." };
   if (!(input.minStockDisplay >= 0)) return { error: "El stock mínimo no puede ser negativo." };
 
+  const n = input.nutrition;
+  const values = [n.kcal, n.protein, n.carbs, n.fat, n.fiber];
+  if (values.some((x) => !Number.isFinite(x) || x < 0 || x > 9999)) return { error: "Revisa los valores nutricionales." };
+  if (n.protein + n.carbs + n.fat > 100 && input.unit !== "un") {
+    return { error: "Proteína, carbohidratos y grasas no pueden sumar más de 100 g por cada 100." };
+  }
+  const validAllergens: string[] = ALLERGENS.map((a) => a.id);
+  const r1 = (x: number) => Math.round(x * 10) / 10;
+
   const factor = unitFactor(input.unit);
   const row = {
+    image_url: input.imageUrl || null,
+    kcal: r1(n.kcal),
+    protein: r1(n.protein),
+    carbs: r1(n.carbs),
+    fat: r1(n.fat),
+    fiber: r1(n.fiber),
+    allergens: [...new Set(input.allergens)].filter((a) => validAllergens.includes(a)),
     name,
     category_id: input.categoryId,
     unit: input.unit,
@@ -196,17 +234,9 @@ export type BuilderOptionInput = {
   ingredientId: string | null;
   quantity: number;
   price: number;
-  color: string;
   active: boolean;
 };
 
-const LAYER_DEFAULTS: Record<BuilderOptionInput["step"], Record<string, unknown>> = {
-  base: { type: "base", size: 95, x: 50, y: 57, opacity: 0.88 },
-  vegetables: { type: "veg", size: 13, x: 50, y: 48, rotate: 0 },
-  proteins: { type: "protein", size: 20, x: 50, y: 46, opacity: 0.95 },
-  toppings: { type: "topping", size: 7, x: 50, y: 42 },
-  sauce: { type: "sauce", size: 100, x: 50, y: 50, opacity: 0.25 },
-};
 
 export async function saveBuilderOption(input: BuilderOptionInput): Promise<ActionState> {
   await requirePermission("catalog.manage");
@@ -214,22 +244,8 @@ export async function saveBuilderOption(input: BuilderOptionInput): Promise<Acti
   if (!name) return { error: "Escribe el nombre de la opción." };
   if (!Number.isInteger(input.price) || input.price < 0) return { error: "El valor extra debe ser un entero en pesos." };
   if (!(input.quantity >= 0)) return { error: "La cantidad no puede ser negativa." };
-  if (!/^#[0-9a-fA-F]{6}$/.test(input.color)) return { error: "Color inválido." };
 
   const supabase = await createClient();
-  let layer: Record<string, unknown> = { ...LAYER_DEFAULTS[input.step] };
-  if (input.id) {
-    const { data } = await supabase.from("builder_options").select("layer").eq("id", input.id).single();
-    layer = { ...layer, ...((data?.layer as object) ?? {}) };
-  } else {
-    // Ubicación levemente aleatoria para que no se monten las capas nuevas.
-    if (input.step !== "base" && input.step !== "sauce") {
-      layer.x = 38 + Math.round(Math.random() * 24);
-      layer.y = 42 + Math.round(Math.random() * 10);
-    }
-  }
-  layer.color = input.color;
-
   const row = {
     step: input.step,
     name,
@@ -237,7 +253,6 @@ export async function saveBuilderOption(input: BuilderOptionInput): Promise<Acti
     ingredient_id: input.ingredientId,
     quantity: input.quantity,
     price: input.price,
-    layer: layer as NonNullable<Json>,
     active: input.active,
   };
   const { error } = input.id

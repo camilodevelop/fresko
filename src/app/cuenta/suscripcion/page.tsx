@@ -3,9 +3,13 @@ import { ArrowUpRight, CalendarCheck, CheckCircle2, RefreshCw, Salad, Sparkles }
 import { PageHeader, Panel, PreviewNotice, StatCard, StatusBadge } from "@/components/dashboard/ui";
 import { Button } from "@/components/ui/button";
 import { PREVIEW_PLAN, formatLongDate, formatShortDate } from "@/lib/data/account-preview";
+import { formatTime12 } from "@/lib/delivery";
+import { loadDeliveryZones } from "@/lib/orders";
 import { formatPrice } from "@/lib/utils";
 
-export default function SuscripcionPage() {
+export default async function SuscripcionPage() {
+  const zones = await loadDeliveryZones();
+  const cutoff = formatTime12(zones[0]?.cutoffTime ?? "08:00");
   const plan = PREVIEW_PLAN;
   const available = plan.total - plan.used - plan.scheduled;
 
@@ -54,7 +58,7 @@ export default function SuscripcionPage() {
             {[
               "Entrega programada a domicilio",
               "Bowls y ensaladas en el mismo plan",
-              "Cambia tus platos hasta las 7:00 a. m. del día",
+              `Cambia tus platos hasta las ${cutoff} del día`,
               "Productos premium con recargo al elegirlos",
             ].map((b) => (
               <li key={b} className="flex items-start gap-2">

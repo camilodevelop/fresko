@@ -2,12 +2,19 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, KeyRound, Loader2, Trash2, UserRound } from "lucide-react";
+import Link from "next/link";
+import { Camera, CheckCircle2, KeyRound, Loader2, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { setMarketingConsent } from "@/app/actions/consents";
+import { Switch } from "@/components/ui/switch";
+import { COMPANY } from "@/lib/legal";
 import { setAvatar, updateContact, updatePassword, type ActionState } from "@/app/actions/profile";
 import { UserAvatar } from "@/components/dashboard/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { isValidPhone, parseStoredPhone, type PhoneValue } from "@/lib/phone";
 import { useFormValidation } from "@/hooks/use-form-validation";
 import { first, rules } from "@/lib/validation";
 import { notify, toast } from "@/lib/notify";
@@ -20,6 +27,8 @@ export type ProfileData = {
   phone: string;
   avatarUrl: string | null;
   hasPassword: boolean;
+  marketing: boolean;
+  consents: { document: string; version: string | null; date: string | null }[];
 };
 
 
@@ -145,10 +154,15 @@ function AvatarCard({ profile }: { profile: ProfileData }) {
 }
 
 function ContactCard({ profile }: { profile: ProfileData }) {
+  const [phone, setPhone] = useState<PhoneValue>(() => parseStoredPhone(profile.phone));
   const v = useFormValidation(
     (f) => ({
       full_name: rules.required(f.full_name, "Escribe tu nombre."),
-      phone: rules.phoneCO(f.phone),
+      phone: !phone.number.trim()
+        ? "Escribe tu celular para coordinar las entregas."
+        : !isValidPhone(phone)
+          ? "Ese número no es válido para el país elegido."
+          : null,
       email: first(rules.required(f.email, "Escribe tu correo."), rules.email(f.email)),
     }),
     undefined,
@@ -165,14 +179,20 @@ function ContactCard({ profile }: { profile: ProfileData }) {
         <Field label="Nombre completo" name={v.idFor("full_name")} error={v.error("full_name")}>
           <Input {...v.field("full_name")} defaultValue={profile.fullName} autoComplete="name" />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Celular" optional name={v.idFor("phone")} error={v.error("phone")} hint="10 dígitos, por ejemplo 3001234567.">
-            <Input {...v.field("phone")} defaultValue={profile.phone} inputMode="tel" autoComplete="tel" placeholder="3001234567" />
-          </Field>
-          <Field label="Correo" name={v.idFor("email")} error={v.error("email")}>
-            <Input {...v.field("email")} type="email" inputMode="email" defaultValue={profile.email} autoComplete="email" />
-          </Field>
-        </div>
+        <Field label="Celular" name={v.idFor("phone")} error={v.error("phone")} hint="Elige el país y escribe el número.">
+          <PhoneInput
+            value={phone}
+            onChange={(value) => {
+              setPhone(value);
+              if (v.error("phone")) requestAnimationFrame(v.revalidate);
+            }}
+            inputProps={v.field("phone")}
+            hiddenName="phone_e164"
+          />
+        </Field>
+        <Field label="Correo" name={v.idFor("email")} error={v.error("email")}>
+          <Input {...v.field("email")} type="email" inputMode="email" defaultValue={profile.email} autoComplete="email" />
+        </Field>
         <div className="flex flex-wrap items-center gap-4">
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando…" : "Guardar cambios"}
@@ -215,15 +235,15 @@ function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
       <form action={action} {...v.formProps()} className="space-y-4">
         {hasPassword && (
           <Field label="Contraseña actual" name={v.idFor("current")} error={v.error("current")}>
-            <Input {...v.field("current")} type="password" autoComplete="current-password" />
+            <PasswordInput {...v.field("current")} autoComplete="current-password" />
           </Field>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Nueva contraseña" name={v.idFor("password")} error={v.error("password")} hint="Mínimo 8 caracteres.">
-            <Input {...v.field("password")} type="password" autoComplete="new-password" />
+            <PasswordInput {...v.field("password")} autoComplete="new-password" />
           </Field>
           <Field label="Confirmar" name={v.idFor("confirm")} error={v.error("confirm")}>
-            <Input {...v.field("confirm")} type="password" autoComplete="new-password" />
+            <PasswordInput {...v.field("confirm")} autoComplete="new-password" />
           </Field>
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -236,6 +256,69 @@ function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
   );
 }
 
+function PrivacyCard({ profile }: { profile: ProfileData }) {
+  const router = useRouter();
+  const [marketing, setMarketing] = useState(profile.marketing);
+  const [pending, start] = useTransition();
+  const fmt = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Bogota" });
+  const LABEL: Record<string, { name: string; href: string }> = {
+    terminos: { name: "Términos y condiciones", href: "/legal/terminos" },
+    privacidad: { name: "Tratamiento de datos personales", href: "/legal/privacidad" },
+  };
+
+  return (
+    <Card icon={ShieldCheck} title="Privacidad y datos" description="Tus autorizaciones y cómo ejercer tus derechos.">
+      <ul className="space-y-2 text-sm">
+        {profile.consents.map((c) => (
+          <li key={c.document} className="flex items-center justify-between gap-3 rounded-2xl bg-[#F8F7F2] px-4 py-3">
+            <div>
+              <Link href={LABEL[c.document].href} target="_blank" className="font-medium text-[#1F4D36] underline">
+                {LABEL[c.document].name}
+              </Link>
+              <p className="text-xs text-[#1B1B1B]/45">
+                {c.date ? `Aceptado el ${fmt.format(new Date(c.date))} · versión ${c.version}` : "Sin aceptar"}
+              </p>
+            </div>
+            <CheckCircle2 className={c.date ? "h-5 w-5 text-[#7CB342]" : "h-5 w-5 text-[#1B1B1B]/20"} />
+          </li>
+        ))}
+      </ul>
+
+      <label className="mt-4 flex items-start justify-between gap-4 rounded-2xl px-1 py-2 text-sm">
+        <span>
+          <span className="font-medium text-[#1F4D36]">Novedades y promociones</span>
+          <span className="block text-xs text-[#1B1B1B]/50">Por correo o WhatsApp. Los avisos de tus pedidos llegan siempre.</span>
+        </span>
+        <Switch
+          label="Recibir novedades y promociones"
+          checked={marketing}
+          disabled={pending}
+          onChange={(value) =>
+            start(async () => {
+              setMarketing(value);
+              if (!notify(await setMarketingConsent(value))) setMarketing(!value);
+              router.refresh();
+            })
+          }
+        />
+      </label>
+
+      <p className="mt-4 border-t border-[#1F4D36]/[0.06] pt-4 text-xs leading-relaxed text-[#1B1B1B]/50">
+        Puedes actualizar tus datos aquí mismo. Para pedir una copia de tu información, la prueba de tu autorización o la eliminación de tu
+        cuenta, escríbenos a{" "}
+        <a href={`mailto:${COMPANY.privacyEmail}?subject=${encodeURIComponent("Solicitud de datos personales")}`} className="font-semibold text-[#1F4D36] underline">
+          {COMPANY.privacyEmail}
+        </a>{" "}
+        desde el correo de tu cuenta. Respondemos según los plazos de la{" "}
+        <Link href="/legal/privacidad#procedimiento" target="_blank" className="font-semibold text-[#1F4D36] underline">
+          Política de tratamiento de datos
+        </Link>
+        .
+      </p>
+    </Card>
+  );
+}
+
 export function ProfileSettings({ profile }: { profile: ProfileData }) {
   return (
     <div className="grid gap-6 xl:grid-cols-2">
@@ -243,7 +326,10 @@ export function ProfileSettings({ profile }: { profile: ProfileData }) {
         <AvatarCard profile={profile} />
         <PasswordCard hasPassword={profile.hasPassword} />
       </div>
-      <ContactCard profile={profile} />
+      <div className="space-y-6">
+        <ContactCard profile={profile} />
+        <PrivacyCard profile={profile} />
+      </div>
     </div>
   );
 }

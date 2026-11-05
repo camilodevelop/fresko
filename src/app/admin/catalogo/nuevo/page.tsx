@@ -1,3 +1,4 @@
+import { EMPTY_NUTRITION } from "@/lib/nutrition";
 import { ProductEditor } from "@/components/catalog/ProductEditor";
 import { loadEditorData } from "../editor-data";
 
@@ -22,6 +23,9 @@ export default async function NuevoProductoPage() {
         featured: false,
         active: true,
         recipe: [],
+        nutritionMode: "auto",
+        nutritionManual: EMPTY_NUTRITION,
+        dietaryTags: [],
       }}
     />
   );

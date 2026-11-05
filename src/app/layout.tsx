@@ -44,8 +44,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} ${poppins.variable}`}>
-      <body className="min-h-screen antialiased">
+    <html lang="es" className={`${inter.variable} ${poppins.variable}`} data-scroll-behavior="smooth">
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
         <CartProvider>{children}</CartProvider>
         <Toaster />
       </body>

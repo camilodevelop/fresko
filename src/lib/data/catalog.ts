@@ -3,10 +3,11 @@ import { createClient as createSupabase } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { supabaseConfigured } from "@/lib/supabase/env";
 import { planFromPrice } from "@/lib/pricing";
+import { effectiveNutrition, parseNutrition } from "@/lib/nutrition";
 import type { BuilderOption, BuilderStep } from "./builder";
 import type { MenuCategory, MenuItem } from "./products";
 
-const FALLBACK_IMAGE = "/images/bowl.png";
+import { FALLBACK_PRODUCT_IMAGE as FALLBACK_IMAGE } from "@/lib/product-image";
 
 /** Cliente público sin cookies: lectura de catálogo activo sin volver dinámica la página. */
 function publicClient() {
@@ -39,7 +40,9 @@ export async function getMenuItems(opts: { featuredOnly?: boolean } = {}): Promi
   if (!supabaseConfigured) return [];
   let query = publicClient()
     .from("products")
-    .select("slug, name, description, price, image_url, tag, kind, sort, product_categories!inner(slug, name, sort, active)")
+    .select(
+      "slug, name, description, price, image_url, tag, kind, sort, nutrition_mode, nutrition, nutrition_manual, allergens, dietary_tags, product_categories!inner(slug, name, sort, active)"
+    )
     .eq("active", true)
     .eq("product_categories.active", true)
     .order("sort")
@@ -58,6 +61,9 @@ export async function getMenuItems(opts: { featuredOnly?: boolean } = {}): Promi
       categoryName: p.product_categories.name,
       tag: p.tag ?? undefined,
       builder: p.kind === "builder",
+      nutrition: p.kind === "builder" ? null : effectiveNutrition(p.nutrition_mode, p.nutrition, p.nutrition_manual),
+      allergens: p.allergens,
+      dietaryTags: p.dietary_tags,
     }));
 }
 
@@ -77,7 +83,7 @@ export async function getBuilderConfig(slug?: string): Promise<BuilderConfig> {
 
   const supabase = publicClient();
   const [{ data: rows }, { data: builders }] = await Promise.all([
-    supabase.from("builder_options").select("id, step, name, emoji, price, layer").eq("active", true).order("sort"),
+    supabase.from("builder_options").select("id, step, name, emoji, price, nutrition, allergens, image_url").eq("active", true).order("sort"),
     supabase
       .from("products")
       .select("slug, name, price, sort, product_categories!inner(name, sort, active)")
@@ -92,7 +98,9 @@ export async function getBuilderConfig(slug?: string): Promise<BuilderConfig> {
       name: o.name,
       emoji: o.emoji,
       price: o.price,
-      layer: o.layer as BuilderOption["layer"],
+      image: o.image_url,
+      nutrition: parseNutrition(o.nutrition),
+      allergens: o.allergens,
     });
   }
   const products = (builders ?? [])

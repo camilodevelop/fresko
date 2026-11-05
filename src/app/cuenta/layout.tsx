@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { ACCOUNT_NAV_GROUPS } from "@/lib/data/account";
-import { requireSession } from "@/lib/supabase/auth";
+import { requireConsentedSession } from "@/lib/supabase/auth";
 import { getNotifications } from "@/lib/notifications";
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CuentaLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireSession("/cuenta");
+  const session = await requireConsentedSession("/cuenta");
   // El personal no es cliente: va directo a su panel.
   if (session.isStaff) redirect("/admin");
 

@@ -48,3 +48,10 @@ join (values
   ('cocina@fresko.test', 'info',   'Producción de mañana lista',  '18 bowls y 9 ensaladas para el jueves.',           '/admin',            interval '40 minutes'),
   ('cliente@fresko.test', 'success', 'Tu pedido va en camino',    'Llega hoy entre 11:00 y 13:00.',                   '/cuenta/entregas',  interval '10 minutes')
 ) as n(email, kind, title, body, href, ago) on n.email = p.email;
+
+-- Aceptación de documentos legales de los usuarios de prueba (versión vigente en src/lib/legal.ts).
+insert into public.user_consents (user_id, document, version, accepted, method, user_agent)
+select p.id, d.document, '2026-11-05', d.document <> 'comunicaciones', 'registro', 'seed'
+from public.profiles p
+cross join (values ('terminos'), ('privacidad'), ('comunicaciones')) as d(document)
+where p.email like '%@fresko.test';

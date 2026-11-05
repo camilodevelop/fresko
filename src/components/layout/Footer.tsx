@@ -11,8 +11,10 @@ const footerLinks = {
     { href: "#suscripciones", label: "Suscripciones" },
   ],
   legal: [
-    { href: "#", label: "Términos y condiciones" },
-    { href: "#", label: "Política de privacidad" },
+    { href: "/legal/terminos", label: "Términos y condiciones" },
+    { href: "/legal/privacidad", label: "Tratamiento de datos" },
+    { href: "/legal/cookies", label: "Cookies" },
+    { href: "/legal/pqrs", label: "PQRS" },
   ],
 };
 

@@ -70,17 +70,26 @@ export type IngredientRow = {
   stock: number;
   min_stock: number;
   active: boolean;
+  image_url: string | null;
+  /** Por 100 g / 100 ml, o por unidad si unit = "un". */
+  nutrition: IngredientNutrition;
+  allergens: string[];
 };
+
+export type IngredientNutrition = { kcal: number; protein: number; carbs: number; fat: number; fiber: number };
 
 export async function loadIngredients(): Promise<IngredientRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("ingredients")
-    .select("id, name, category_id, unit, cost_per_unit, stock, min_stock, active, ingredient_categories(name, sort)")
+    .select(
+      "id, name, category_id, unit, cost_per_unit, stock, min_stock, active, image_url, kcal, protein, carbs, fat, fiber, allergens, ingredient_categories(name, sort)"
+    )
     .order("name");
   return (data ?? [])
-    .map(({ category_id, ingredient_categories, ...i }) => ({
+    .map(({ category_id, ingredient_categories, kcal, protein, carbs, fat, fiber, ...i }) => ({
       ...i,
+      nutrition: { kcal: Number(kcal), protein: Number(protein), carbs: Number(carbs), fat: Number(fat), fiber: Number(fiber) },
       category: category_id,
       categoryName: ingredient_categories?.name ?? "",
       categorySort: ingredient_categories?.sort ?? 0,

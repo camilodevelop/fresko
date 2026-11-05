@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useId, useState, useTransition } from "react";
 import { Check, Plus } from "lucide-react";
@@ -15,7 +16,7 @@ import { suggestedPrice, type PricingSettings, type Unit } from "@/lib/pricing";
 import { notify } from "@/lib/notify";
 import { cn, formatPrice } from "@/lib/utils";
 
-type Ing = { id: string; name: string; unit: Unit; cost_per_unit: number };
+type Ing = { id: string; name: string; unit: Unit; cost_per_unit: number; image: string | null };
 type Step = BuilderOptionInput["step"];
 
 const STEP_LABEL: Record<Step, string> = {
@@ -26,13 +27,6 @@ const STEP_LABEL: Record<Step, string> = {
   sauce: "Salsas",
 };
 
-const DEFAULT_COLOR: Record<Step, string> = {
-  base: "#7CB342",
-  vegetables: "#43A047",
-  proteins: "#D4A574",
-  toppings: "#A1887F",
-  sauce: "#FFF59D",
-};
 
 function OptionRow({
   initial,
@@ -94,13 +88,16 @@ function OptionRow({
         />
       </div>
       <div className="flex items-center gap-2">
-        <input
-          type="color"
-          aria-label="Color en la vista previa"
-          className="h-10 w-10 shrink-0 cursor-pointer rounded-xl border border-[#1F4D36]/15 bg-white p-1"
-          value={o.color}
-          onChange={(e) => set({ color: e.target.value })}
-        />
+        <span
+          className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-[#F4F8F2]"
+          title={ing?.image ? "Foto del ingrediente" : "Sin foto: se muestra el emoji. Súbela en Catálogo → Ingredientes."}
+        >
+          {ing?.image ? (
+            <Image src={ing.image} alt="" fill sizes="40px" className="object-cover" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-lg">{o.emoji}</span>
+          )}
+        </span>
         <div className="min-w-0 flex-1">
           <Input {...v.field("name")} aria-label="Nombre" className="h-10" value={o.name} onChange={(e) => set({ name: e.target.value })} placeholder="Nombre" />
           <FieldError name={v.idFor("name")} error={v.error("name")} />
@@ -183,7 +180,9 @@ export function BuilderManager({
         <p className="text-sm text-[#1B1B1B]/60">
           Estas opciones se usan en todos los productos de tipo <strong>Armador</strong> (Arma tu bowl, Arma tu ensalada…). El precio
           final es el <strong>precio del producto</strong> más el valor extra de cada opción que elija el cliente, y cada opción descontará
-          su ingrediente del inventario. El precio base se cambia en la ficha de cada producto, en{" "}
+          su ingrediente del inventario. La vista previa del bowl usa la <strong>foto de cada ingrediente</strong> (se cambia en{" "}
+          <Link href="/admin/catalogo/ingredientes" className="font-semibold text-[#1F4D36] underline">Ingredientes</Link>). El precio
+          base se cambia en la ficha de cada producto, en{" "}
           <Link href="/admin/catalogo" className="font-semibold text-[#1F4D36] underline">Productos</Link>.
         </p>
       </Panel>
@@ -202,7 +201,7 @@ export function BuilderManager({
           >
             <div className="hidden grid-cols-[44px_1fr_1fr_100px_130px_auto] gap-2 px-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-[#1B1B1B]/40 md:grid">
               <span />
-              <span>Nombre y color</span>
+              <span>Foto y nombre</span>
               <span>Ingrediente</span>
               <span>Cantidad</span>
               <span>Valor extra</span>
@@ -224,7 +223,7 @@ export function BuilderManager({
                   taken={list.map((x) => x.name.trim().toLowerCase())}
                   ingredients={ingredients}
                   settings={settings}
-                  initial={{ step, name: "", emoji: "🥗", ingredientId: null, quantity: 0, price: 0, color: DEFAULT_COLOR[step], active: true }}
+                  initial={{ step, name: "", emoji: "🥗", ingredientId: null, quantity: 0, price: 0, active: true }}
                 />
               ))}
             </div>

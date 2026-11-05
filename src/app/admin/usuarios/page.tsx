@@ -2,6 +2,7 @@ import { Search, Users } from "lucide-react";
 import { UserAvatar } from "@/components/dashboard/UserAvatar";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/dashboard/ui";
 import { requirePermission } from "@/lib/supabase/auth";
+import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { UserRoleToggle } from "./UserRoleToggle";
 
@@ -75,7 +76,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
                             </p>
                             <p className="truncate text-xs text-[#1B1B1B]/45">
                               {user.email}
-                              {user.phone && ` · ${user.phone}`}
+                              {user.phone && ` · ${formatPhone(user.phone)}`}
                             </p>
                           </div>
                         </div>

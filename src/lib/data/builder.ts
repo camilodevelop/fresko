@@ -1,3 +1,5 @@
+import type { Nutrition } from "@/lib/nutrition";
+
 export type BuilderStep = "base" | "vegetables" | "proteins" | "toppings" | "sauce";
 
 export type BuilderOption = {
@@ -5,16 +7,10 @@ export type BuilderOption = {
   name: string;
   emoji: string;
   price: number;
-  /** Visual layer config for bowl preview */
-  layer: {
-    type: "base" | "veg" | "protein" | "topping" | "sauce";
-    color: string;
-    size: number;
-    x: number;
-    y: number;
-    rotate?: number;
-    opacity?: number;
-  };
+  /** Foto del ingrediente: con ella se arma la vista previa del bowl. */
+  image: string | null;
+  nutrition: Nutrition | null;
+  allergens: string[];
 };
 
 export const BUILDER_STEPS: { id: BuilderStep; label: string; max?: number }[] = [

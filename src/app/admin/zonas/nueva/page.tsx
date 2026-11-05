@@ -27,7 +27,7 @@ export default async function NuevaZonaPage({
           cityId: ciudad ?? cities[0]?.id ?? "",
           name: "",
           color: "#8BC34A",
-          cutoffTime: "07:00",
+          cutoffTime: "08:00",
           deliveryDays: [1, 2, 3, 4, 5, 6],
           active: true,
           polygon: [],
