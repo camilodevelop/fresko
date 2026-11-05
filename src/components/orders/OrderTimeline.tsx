@@ -18,6 +18,13 @@ export function OrderTimeline({ status }: { status: string }) {
       </div>
     );
   }
+  if (status === "no_entregado") {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+        <XCircle className="h-5 w-5" /> No pudimos entregar este pedido. Te contactaremos para coordinar la entrega.
+      </div>
+    );
+  }
   if (status === "pendiente_pago") {
     return (
       <div className="flex items-center gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  AlertTriangle,
   Boxes,
   CalendarClock,
   ChefHat,
@@ -46,6 +47,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   salad: Salad,
   boxes: Boxes,
   sliders: SlidersHorizontal,
+  alert: AlertTriangle,
 };
 
 export type SidebarUser = {

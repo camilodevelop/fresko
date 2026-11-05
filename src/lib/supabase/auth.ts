@@ -42,7 +42,7 @@ export const getSession = cache(async (): Promise<SessionInfo | null> => {
   if (!user) return null;
 
   const [{ data: profile }, { data: perms }, { data: roles }, { data: consents }] = await Promise.all([
-    supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, avatar_url, active").eq("id", user.id).single(),
     supabase.rpc("my_permissions"),
     supabase.from("user_roles").select("roles(name)").eq("user_id", user.id),
     supabase
@@ -53,6 +53,8 @@ export const getSession = cache(async (): Promise<SessionInfo | null> => {
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
+  // Cuenta inactiva: se trata como sin sesión (Auth ya no la deja renovar ni volver a entrar).
+  if (profile && profile.active === false) return null;
   const latest = (doc: string) => consents?.find((c) => c.document === doc);
   const permissions = new Set(perms ?? []);
 

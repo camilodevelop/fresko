@@ -26,12 +26,16 @@ export default async function PedidoDetallePage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, code, kind, status, payment_status, total, subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, created_at, subscriptions(code, plan_name), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at)"
+      "id, code, kind, status, payment_status, total, delivered_at, delivery_photo_path, subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, created_at, subscriptions(code, plan_name), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at)"
     )
     .eq("code", code.toUpperCase())
     .eq("user_id", session.userId)
     .maybeSingle();
   if (!order) notFound();
+  // Foto de la entrega (bucket privado): enlace temporal.
+  const photo = order.delivery_photo_path
+    ? (await supabase.storage.from("delivery-proofs").createSignedUrl(order.delivery_photo_path, 3600)).data?.signedUrl ?? null
+    : null;
 
   const address = order.address_snapshot as { label: string; address: string; details: string };
   const events = [...order.order_events].sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -84,6 +88,21 @@ export default async function PedidoDetallePage({
         <div className="space-y-6">
           <Panel title="Estado">
             <OrderTimeline status={order.status} />
+            {photo && (
+              <a href={photo} target="_blank" rel="noreferrer" className="mt-5 flex items-center gap-3 rounded-2xl bg-[#F4F8F2] p-3 text-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element -- enlace firmado temporal */}
+                <img src={photo} alt="Foto de la entrega" className="h-16 w-16 rounded-xl object-cover" />
+                <span>
+                  <span className="block font-semibold text-[#1F4D36]">Foto de la entrega</span>
+                  <span className="text-xs text-[#1B1B1B]/50">
+                    {order.delivered_at
+                      ? new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" }).format(new Date(order.delivered_at))
+                      : ""}{" "}
+                    · toca para ampliar
+                  </span>
+                </span>
+              </a>
+            )}
           </Panel>
 
           <Panel title="Productos">

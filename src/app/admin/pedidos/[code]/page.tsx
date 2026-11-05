@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IncidentResolve } from "@/components/admin-orders/IncidentResolve";
 import { notFound } from "next/navigation";
 import { CalendarDays, ExternalLink, MapPin, MessageSquareText, Phone, UserRound } from "lucide-react";
 import { OrderStatusActions } from "@/components/admin-orders/OrderStatusActions";
@@ -20,11 +21,15 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, code, kind, status, payment_status, total, subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, contact_name, contact_phone, created_at, paid_at, zones(name), subscriptions(code, plan_name), profiles(email), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at, profiles(full_name)), payments(id, status, amount, reference, provider, created_at)"
+      "id, code, kind, status, payment_status, total, delivered_at, delivery_photo_path, on_hold, order_incidents(stage, item_name, quantity, reason, note, created_at, resolution, photo_path), subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, contact_name, contact_phone, created_at, paid_at, zones(name), subscriptions(code, plan_name), profiles!orders_user_id_fkey(email), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at, profiles(full_name)), payments(id, status, amount, reference, provider, created_at)"
     )
     .eq("code", code.toUpperCase())
     .maybeSingle();
   if (!order) notFound();
+  // Foto de la entrega (bucket privado): enlace temporal.
+  const photo = order.delivery_photo_path
+    ? (await supabase.storage.from("delivery-proofs").createSignedUrl(order.delivery_photo_path, 3600)).data?.signedUrl ?? null
+    : null;
 
   const addr = order.address_snapshot as { label: string; address: string; details: string; lat: number; lng: number };
   const fmt = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" });
@@ -56,8 +61,35 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
+          <IncidentResolve
+            orderId={order.id}
+            status={order.status}
+            onHold={order.on_hold}
+            incidents={await Promise.all(
+              order.order_incidents.map(async (n) => ({
+                ...n,
+                photoUrl: n.photo_path ? ((await supabase.storage.from("delivery-proofs").createSignedUrl(n.photo_path, 3600)).data?.signedUrl ?? null) : null,
+              }))
+            )}
+            canManage={canManage}
+          />
           <Panel title="Estado">
             <OrderTimeline status={order.status} />
+            {photo && (
+              <a href={photo} target="_blank" rel="noreferrer" className="mt-5 flex items-center gap-3 rounded-2xl bg-[#F4F8F2] p-3 text-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element -- enlace firmado temporal */}
+                <img src={photo} alt="Foto de la entrega" className="h-16 w-16 rounded-xl object-cover" />
+                <span>
+                  <span className="block font-semibold text-[#1F4D36]">Foto de la entrega</span>
+                  <span className="text-xs text-[#1B1B1B]/50">
+                    {order.delivered_at
+                      ? new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" }).format(new Date(order.delivered_at))
+                      : ""}{" "}
+                    · toca para ampliar
+                  </span>
+                </span>
+              </a>
+            )}
           </Panel>
 
           <Panel title="Para preparar" description={`${order.order_items.reduce((s, i) => s + i.quantity, 0)} platos`}>

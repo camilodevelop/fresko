@@ -11,7 +11,8 @@ export type NavIcon =
   | "truck"
   | "salad"
   | "boxes"
-  | "sliders";
+  | "sliders"
+  | "alert";
 
 export type NavItem = {
   href: string;

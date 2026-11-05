@@ -24,6 +24,7 @@ const ERRORS: Record<string, string> = {
   "Invalid login credentials": "Correo o contraseña incorrectos.",
   "User already registered": "Ya existe una cuenta con ese correo.",
   "Email not confirmed": "Confirma tu correo antes de ingresar.",
+  "User is banned": "Tu cuenta está inactiva. Escríbenos si crees que es un error.",
 };
 
 function translate(message: string) {

@@ -113,7 +113,7 @@ export default async function AdminPedidosPage({
             </Link>
           ))}
           <span className="mx-1 w-px shrink-0 bg-[#1F4D36]/10" />
-          {["confirmado", "en_preparacion", "en_camino", "entregado", "cancelado"].map((s) => (
+          {["confirmado", "en_preparacion", "en_camino", "entregado", "no_entregado", "cancelado"].map((s) => (
             <Link
               key={s}
               href={link({ estado: estado === s ? "" : s })}

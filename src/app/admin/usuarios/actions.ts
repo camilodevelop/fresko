@@ -24,3 +24,14 @@ export async function setUserRole(userId: string, roleId: string, enabled: boole
   const who = profile?.full_name || profile?.email || "Usuario";
   return { ok: enabled ? `${who} ahora es ${role?.name ?? "parte del rol"}.` : `${who} ya no es ${role?.name ?? "parte del rol"}.` };
 }
+
+/** Activa o inactiva la cuenta (inactivar exige motivo, bloquea el ingreso y cierra sus sesiones). */
+export async function setUserActive(userId: string, active: boolean, reason = ""): Promise<{ ok?: string; error?: string }> {
+  await requirePermission("users.manage");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_user_active", { p_user_id: userId, p_active: active, p_reason: reason.trim() });
+  if (error) return { error: error.hint || "No se pudo actualizar el usuario." };
+  revalidatePath("/admin/usuarios");
+  revalidatePath(`/admin/usuarios/${userId}`);
+  return { ok: active ? "Usuario activado: ya puede volver a ingresar." : "Usuario inactivado: se cerraron sus sesiones y no puede ingresar." };
+}

@@ -85,6 +85,7 @@ export const ORDER_STATUS: Record<string, { label: string; tone: "green" | "blue
   en_preparacion: { label: "En preparación", tone: "amber" },
   en_camino: { label: "En camino", tone: "dark" },
   entregado: { label: "Entregado", tone: "green" },
+  no_entregado: { label: "No entregado", tone: "red" },
   cancelado: { label: "Cancelado", tone: "red" },
 };
 

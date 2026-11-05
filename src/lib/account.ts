@@ -23,7 +23,7 @@ export async function loadUpcomingDeliveries(userId: string, limit = 20): Promis
     .from("orders")
     .select("id, code, delivery_date, slot_label, status, total, order_items(name, quantity)")
     .eq("user_id", userId)
-    .in("status", ["confirmado", "en_preparacion", "en_camino"])
+    .in("status", ["confirmado", "en_preparacion", "en_camino", "no_entregado"])
     .gte("delivery_date", todayBogota())
     .order("delivery_date")
     .limit(limit);
