@@ -171,9 +171,11 @@ export function PlansManager({ plans, baseValue, recommended }: { plans: PlanRow
           </Field>
           <div className="flex flex-1 flex-wrap items-center gap-3 lg:pt-6">
             {recommended > 0 && (
-              <span className="flex items-center gap-2 rounded-2xl border border-dashed border-[#8BC34A] bg-[#F4F8F2] py-1.5 pl-3 pr-1.5 text-sm text-[#1F4D36]">
-                Recomendado: <strong>{formatPrice(recommended)}</strong>
-                <span className="text-xs text-[#1B1B1B]/45">(plato más económico)</span>
+              <span className="flex w-full items-center gap-2 rounded-2xl border border-dashed border-[#8BC34A] bg-[#F4F8F2] py-1.5 pl-3 pr-1.5 text-sm text-[#1F4D36] sm:w-auto">
+                <span className="min-w-0 flex-1">
+                  Recomendado: <strong>{formatPrice(recommended)}</strong>
+                  <span className="block text-xs text-[#1B1B1B]/45 sm:ml-1 sm:inline">(plato más económico)</span>
+                </span>
                 <Button
                   size="sm"
                   variant="fresh"

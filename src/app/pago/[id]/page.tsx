@@ -5,6 +5,7 @@ import { CalendarDays, MapPin, ShieldCheck } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { PaymentBox } from "@/components/cart/PaymentBox";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { formatDeliveryDate } from "@/lib/delivery";
 import { requireConsentedSession } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -31,13 +32,15 @@ export default async function PagoPage({ params }: { params: Promise<{ id: strin
   return (
     <>
       <Navbar />
+      <ScrollToTop />
       <main className="min-h-screen bg-[#F8F7F2] pt-24 pb-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7CB342]">Pedido {order.code}</p>
           <h1 className="mt-1 font-display text-3xl font-bold text-[#1F4D36]">Pago</h1>
 
-          <div className="mt-8 grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_340px]">
-            <section className="rounded-3xl bg-white p-6 ring-1 ring-[#1F4D36]/[0.07]">
+          <div className="mt-6 grid items-start gap-6 sm:mt-8 md:grid-cols-[minmax(0,1fr)_340px]">
+            {/* En móvil el pago va primero: el botón se ve sin bajar. */}
+            <section className="order-2 rounded-3xl bg-white p-5 ring-1 ring-[#1F4D36]/[0.07] sm:p-6 md:order-none">
               <h2 className="font-display font-bold text-[#1F4D36]">Resumen del pedido</h2>
               <ul className="mt-4 divide-y divide-[#1F4D36]/[0.06] text-sm">
                 {order.order_items.map((item) => {
@@ -87,7 +90,7 @@ export default async function PagoPage({ params }: { params: Promise<{ id: strin
               </div>
             </section>
 
-            <div className="space-y-4">
+            <div className="order-1 space-y-4 md:sticky md:top-24 md:order-none">
               <PaymentBox orderId={order.id} code={order.code} total={order.total} rejected={order.payment_status === "rechazado"} />
               <p className="flex items-center justify-center gap-1.5 text-xs text-[#1B1B1B]/45">
                 <ShieldCheck className="h-4 w-4" /> Pago seguro · la pasarela real se conecta al final

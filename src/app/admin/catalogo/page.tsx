@@ -108,7 +108,59 @@ export default async function CatalogoPage({
       }
     >
       {products && products.length > 0 ? (
-        <div className="mt-5 overflow-x-auto">
+        <>
+        <div className="mt-4 flex gap-1.5 overflow-x-auto px-5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
+          {filters.map((f) => (
+            <Link
+              key={f.slug}
+              href={f.slug ? `/admin/catalogo?categoria=${f.slug}` : "/admin/catalogo"}
+              className={cn(
+                "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold",
+                (current?.slug ?? "") === f.slug ? "bg-[#1F4D36] text-white" : "bg-[#F4F8F2] text-[#1F4D36]/70"
+              )}
+            >
+              {f.name}
+            </Link>
+          ))}
+        </div>
+        {/* Móvil: tarjetas en lugar de tabla */}
+        <ul className="mt-5 divide-y divide-[#1F4D36]/[0.06] border-t border-[#1F4D36]/[0.06] md:hidden">
+          {products.map((p) => {
+            const cost = costOf.get(p.id) ?? 0;
+            const target = p.target_margin !== null ? Number(p.target_margin) : settings.targetMargin;
+            const isBuilder = p.kind === "builder";
+            const category = categoryOf.get(p.category_id);
+            return (
+              <li key={p.id} className={cn("px-5 py-4", !p.active && "opacity-55")}>
+                <Link href={`/admin/catalogo/${p.id}`} className="flex items-center gap-3">
+                  <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[#F4F8F2]">
+                    <Image src={p.image_url || FALLBACK_PRODUCT_IMAGE} alt="" fill sizes="56px" className={isCutoutImage(p.image_url) ? "object-contain p-1" : "object-cover"} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-[#1F4D36]">{p.name}</span>
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-[#1B1B1B]/45">
+                      {category?.name ?? "Sin categoría"}
+                      {isBuilder && <StatusBadge tone="blue" dot={false} className="py-0.5">Armador</StatusBadge>}
+                      {p.tag && <StatusBadge tone="gray" dot={false} className="py-0.5">{p.tag}</StatusBadge>}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="block font-display font-bold text-[#1F4D36]">{formatPrice(p.price)}</span>
+                    <span className="block text-[11px] text-[#1B1B1B]/45">{isBuilder ? "precio base" : `costo ${formatPrice(cost)}`}</span>
+                  </span>
+                </Link>
+                <div className="mt-3 flex items-center justify-between gap-3 pl-[68px]">
+                  {isBuilder || !cost ? <span /> : <MarginBadge margin={realMargin(p.price, cost)} target={target} />}
+                  <span className="flex items-center gap-4">
+                    <ProductFeaturedToggle id={p.id} featured={p.featured} />
+                    <ProductActiveSwitch id={p.id} active={p.active} />
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="mt-5 hidden overflow-x-auto md:block">
           <table className="w-full min-w-[920px] text-left text-sm">
             <thead>
               <tr className="border-y border-[#1F4D36]/[0.06] bg-[#F8F7F2]/60 text-[11px] font-bold uppercase tracking-wider text-[#1B1B1B]/40">
@@ -172,6 +224,7 @@ export default async function CatalogoPage({
             </tbody>
           </table>
         </div>
+        </>
       ) : (
         <div className="p-6">
           <EmptyState

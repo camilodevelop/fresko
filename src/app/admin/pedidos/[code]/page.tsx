@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, ExternalLink, MapPin, MessageSquareText, Phone, UserRound } from "lucide-react";
 import { OrderStatusActions } from "@/components/admin-orders/OrderStatusActions";
@@ -19,7 +20,7 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, code, status, payment_status, total, subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, contact_name, contact_phone, created_at, paid_at, zones(name), profiles(email), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at, profiles(full_name)), payments(id, status, amount, reference, provider, created_at)"
+      "id, code, kind, status, payment_status, total, subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, contact_name, contact_phone, created_at, paid_at, zones(name), subscriptions(code, plan_name), profiles(email), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at, profiles(full_name)), payments(id, status, amount, reference, provider, created_at)"
     )
     .eq("code", code.toUpperCase())
     .maybeSingle();
@@ -41,6 +42,14 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
             {order.code}
             <OrderStatusBadge status={order.status} />
             <PaymentStatusBadge status={order.payment_status} />
+            {order.subscriptions && (
+              <Link
+                href={`/admin/suscripciones/${order.subscriptions.code}`}
+                className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 hover:underline"
+              >
+                {order.subscriptions.plan_name} · {order.subscriptions.code}
+              </Link>
+            )}
           </span>
         }
       />

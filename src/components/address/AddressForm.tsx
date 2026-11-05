@@ -198,16 +198,6 @@ export function AddressForm({
           Usar como dirección principal
         </label>
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={pending}>
-            {pending ? "Guardando…" : submitLabel}
-          </Button>
-          {onCancel && (
-            <Button type="button" variant="ghost" onClick={onCancel}>
-              Cancelar
-            </Button>
-          )}
-        </div>
       </div>
 
       <div>
@@ -232,6 +222,18 @@ export function AddressForm({
           </p>
         )}
         <FieldError name={v.idFor("point")} error={v.error("point")} />
+      </div>
+
+      {/* Debajo del mapa: en móvil primero se ubica el punto y luego se guarda. */}
+      <div className="flex flex-wrap gap-2 lg:col-span-2">
+        <Button type="submit" disabled={pending} className="max-sm:flex-1">
+          {pending ? "Guardando…" : submitLabel}
+        </Button>
+        {onCancel && (
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancelar
+          </Button>
+        )}
       </div>
     </form>
   );

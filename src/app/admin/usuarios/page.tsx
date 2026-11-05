@@ -37,19 +37,57 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
         bodyClassName="p-0"
         title={`${count ?? 0} ${count === 1 ? "persona" : "personas"}`}
         actions={
-          <form className="relative">
+          <form className="relative w-full sm:w-auto">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1B1B1B]/35" />
             <input
               name="q"
               defaultValue={q}
               placeholder="Buscar nombre o correo"
-              className="h-10 w-56 rounded-full border border-[#1F4D36]/12 bg-[#F8F7F2] pl-10 pr-4 text-sm outline-none transition focus:border-[#8BC34A] focus:bg-white sm:w-72"
+              className="h-10 w-full rounded-full border border-[#1F4D36]/12 bg-[#F8F7F2] pl-10 pr-4 text-sm outline-none transition focus:border-[#8BC34A] focus:bg-white sm:w-72"
             />
           </form>
         }
       >
         {users && users.length > 0 ? (
-          <div className="mt-5 overflow-x-auto">
+          <>
+          {/* Móvil: una tarjeta por persona con sus roles */}
+          <ul className="mt-5 divide-y divide-[#1F4D36]/[0.06] border-t border-[#1F4D36]/[0.06] md:hidden">
+            {users.map((user) => {
+              const assigned = new Set(user.user_roles.map((r) => r.role_id));
+              const isClient = clientRole ? assigned.has(clientRole.id) : false;
+              return (
+                <li key={user.id} className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <UserAvatar name={user.full_name} email={user.email} src={user.avatar_url} size={40} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-[#1F4D36]">
+                        {user.full_name || "Sin nombre"}
+                        {user.id === session.userId && <span className="ml-1.5 text-xs font-normal text-[#1B1B1B]/40">(tú)</span>}
+                      </p>
+                      <p className="truncate text-xs text-[#1B1B1B]/45">{user.email}</p>
+                      {user.phone && <p className="truncate text-xs text-[#1B1B1B]/45">{formatPhone(user.phone)}</p>}
+                    </div>
+                    {isClient ? <StatusBadge tone="gray">Cliente</StatusBadge> : <StatusBadge tone="dark">Equipo</StatusBadge>}
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {(roles ?? []).filter((r) => r.key !== "cliente").map((role) => (
+                      <label key={role.id} className="flex items-center justify-between gap-2 rounded-xl bg-[#F8F7F2] px-3 py-2 text-xs font-medium text-[#1B1B1B]/70">
+                        <span className="truncate">{role.name}</span>
+                        <UserRoleToggle
+                          userId={user.id}
+                          roleId={role.id}
+                          roleName={role.name}
+                          checked={assigned.has(role.id)}
+                          locked={user.id === session.userId && role.key === "admin"}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-5 hidden overflow-x-auto md:block">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="border-y border-[#1F4D36]/[0.06] bg-[#F8F7F2]/60 text-[11px] font-bold uppercase tracking-wider text-[#1B1B1B]/40">
@@ -101,6 +139,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <div className="p-6">
             <EmptyState icon={Users} title="Sin resultados" description={term ? `Nadie coincide con “${term}”.` : "Aún no hay usuarios."} />

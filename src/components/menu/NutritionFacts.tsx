@@ -9,7 +9,7 @@ const MACROS = [
 ] as const;
 
 /** Anillo con la proporción de calorías de cada macro y las kcal en el centro. */
-export function MacroRing({ nutrition, size = 132 }: { nutrition: Nutrition; size?: number }) {
+export function MacroRing({ nutrition, size = 132, className }: { nutrition: Nutrition; size?: number; className?: string }) {
   const split = macroSplit(nutrition);
   const stroke = size * 0.11;
   const r = (size - stroke) / 2;
@@ -22,7 +22,7 @@ export function MacroRing({ nutrition, size = 132 }: { nutrition: Nutrition; siz
   })).filter((m) => m.part > 0);
 
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
+    <div className={cn("relative shrink-0", className)} style={{ width: size, height: size }}>
       <svg viewBox={`0 0 ${size} ${size}`} className="-rotate-90" width={size} height={size} aria-hidden>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#EEF3EA" strokeWidth={stroke} />
         {segments.map((m) => (
@@ -41,7 +41,9 @@ export function MacroRing({ nutrition, size = 132 }: { nutrition: Nutrition; siz
         ))}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-3xl font-bold leading-none text-[#1F4D36]">{Math.round(nutrition.kcal)}</span>
+        <span className="font-display font-bold leading-none text-[#1F4D36]" style={{ fontSize: Math.round(size * 0.23) }}>
+          {Math.round(nutrition.kcal)}
+        </span>
         <span className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-[#1B1B1B]/45">kcal</span>
       </div>
     </div>
@@ -52,18 +54,19 @@ export function MacroRing({ nutrition, size = 132 }: { nutrition: Nutrition; siz
 export function NutritionFacts({ nutrition, className }: { nutrition: Nutrition; className?: string }) {
   const split = macroSplit(nutrition);
   return (
-    <div className={cn("rounded-3xl border border-[#1F4D36]/10 bg-[#F8FAF5] p-5", className)}>
-      <div className="flex items-center gap-5">
-        <MacroRing nutrition={nutrition} />
+    <div className={cn("rounded-3xl border border-[#1F4D36]/10 bg-[#F8FAF5] p-4 sm:p-5", className)}>
+      <div className="flex items-center gap-4 sm:gap-5">
+        <MacroRing nutrition={nutrition} size={112} className="sm:hidden" />
+        <MacroRing nutrition={nutrition} className="hidden sm:block" />
         <ul className="min-w-0 flex-1 space-y-3">
           {MACROS.map((m) => (
             <li key={m.key}>
               <div className="flex items-baseline justify-between gap-2 text-sm">
-                <span className="flex items-center gap-2 font-medium text-[#1B1B1B]/70">
-                  <span className={cn("h-2.5 w-2.5 rounded-full", m.soft)} />
+                <span className="flex min-w-0 items-center gap-2 truncate font-medium text-[#1B1B1B]/70">
+                  <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", m.soft)} />
                   {m.label}
                 </span>
-                <span className="font-display font-bold text-[#1F4D36]">{formatGrams(nutrition[m.key])}</span>
+                <span className="shrink-0 font-display font-bold text-[#1F4D36]">{formatGrams(nutrition[m.key])}</span>
               </div>
               <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E6ECE1]">
                 <div className={cn("h-full rounded-full", m.soft)} style={{ width: `${Math.round(split[m.key] * 100)}%` }} />

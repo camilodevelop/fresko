@@ -44,10 +44,10 @@ function isoWeekday(iso: string) {
 export type DeliveryDay = { date: string; weekday: string; day: number; month: string; isToday: boolean; isTomorrow: boolean };
 
 /** Próximas fechas en las que se puede entregar en la zona. */
-export function availableDates(zone: ZoneDelivery, limit = 14, now = new Date()): DeliveryDay[] {
+export function availableDates(zone: ZoneDelivery, limit = 14, now = new Date(), maxAhead = MAX_DAYS_AHEAD): DeliveryDay[] {
   const { date: today, time } = localNow(zone.timezone, now);
   const out: DeliveryDay[] = [];
-  for (let i = 0; i <= MAX_DAYS_AHEAD && out.length < limit; i++) {
+  for (let i = 0; i <= maxAhead && out.length < limit; i++) {
     const iso = addDays(today, i);
     if (!zone.deliveryDays.includes(isoWeekday(iso))) continue;
     if (i === 0 && time >= zone.cutoffTime.slice(0, 5)) continue;

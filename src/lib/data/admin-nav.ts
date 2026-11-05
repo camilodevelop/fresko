@@ -14,6 +14,7 @@ const ADMIN_GROUPS: { label: string; items: AdminItem[] }[] = [
     label: "Operación",
     items: [
       { href: "/admin/pedidos", label: "Pedidos", icon: "package", permission: "orders.view", description: "Pedidos del día, estados y entregas." },
+      { href: "/admin/suscripciones", label: "Suscripciones", icon: "repeat", permission: "orders.view", description: "Planes vendidos, platos usados y vigencias." },
       { href: "/admin/cocina", label: "Cocina", icon: "chef", permission: "kitchen.prepare", soon: true, description: "Producción del día y preparados." },
       { href: "/admin/rutas", label: "Rutas", icon: "truck", permission: "delivery.deliver", soon: true, description: "Entregas por zona y franja, en orden de ruta." },
     ],

@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, FlaskConical } from "lucide-react";
 import { payOrder } from "@/app/actions/orders";
+import { paySubscription } from "@/app/actions/subscriptions";
 import { Button } from "@/components/ui/button";
 import { notify } from "@/lib/notify";
 import { formatPrice } from "@/lib/utils";
@@ -12,15 +13,28 @@ import { formatPrice } from "@/lib/utils";
  * Pasarela SIMULADA. Cuando se elija la pasarela real (Wompi, Mercado Pago…),
  * este componente redirige a su checkout y el webhook confirma el pago.
  */
-export function PaymentBox({ orderId, code, total, rejected }: { orderId: string; code: string; total: number; rejected: boolean }) {
+export function PaymentBox({
+  orderId,
+  code,
+  total,
+  rejected,
+  kind = "order",
+}: {
+  /** Id del pedido o de la suscripción. */
+  orderId: string;
+  code: string;
+  total: number;
+  rejected: boolean;
+  kind?: "order" | "subscription";
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
 
   const pay = (approve: boolean) =>
     start(async () => {
-      const r = await payOrder(orderId, approve);
+      const r = kind === "subscription" ? await paySubscription(orderId, approve) : await payOrder(orderId, approve);
       notify(r);
-      if (r.status === "aprobado") router.push(`/cuenta/pedidos/${code}?pagado=1`);
+      if (r.status === "aprobado") router.push(kind === "subscription" ? `/cuenta/suscripcion/${code}?pagado=1` : `/cuenta/pedidos/${code}?pagado=1`);
       else router.refresh();
     });
 

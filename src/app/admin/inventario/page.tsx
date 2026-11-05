@@ -68,7 +68,7 @@ export default async function InventarioPage({
         description="Stock de cada ingrediente. Las compras, pérdidas y conteos quedan en el historial; el consumo por preparación se descontará cuando la cocina marque los pedidos como preparados."
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard icon={Boxes} label="Ingredientes activos" value={active.length} tone="dark" />
         <StatCard icon={AlertTriangle} label="Bajo el mínimo" value={low.length} hint={low.length ? "Revisa las alertas" : "Todo en orden"} tone={low.length ? "default" : "fresh"} />
         <StatCard icon={PackageX} label="Sin stock" value={out.length} />
@@ -105,12 +105,12 @@ export default async function InventarioPage({
                   const state = i.stock <= 0 ? "out" : i.min_stock > 0 && i.stock < i.min_stock ? "low" : "ok";
                   return (
                     <li key={i.id}>
-                      <Link href={`/admin/inventario?ingrediente=${i.id}${filtro ? `&filtro=${filtro}` : ""}`} className={cn("flex items-center gap-4 px-6 py-3 hover:bg-[#F8F7F2]/60", ingrediente === i.id && "bg-[#F4F8F2]")}>
-                        <div className="w-44 min-w-0 shrink-0">
+                      <Link href={`/admin/inventario?ingrediente=${i.id}${filtro ? `&filtro=${filtro}` : ""}`} className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 hover:bg-[#F8F7F2]/60 sm:flex-nowrap sm:px-6", ingrediente === i.id && "bg-[#F4F8F2]")}>
+                        <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
                           <p className="truncate text-sm font-semibold text-[#1F4D36]">{i.name}</p>
                           <p className="text-xs text-[#1B1B1B]/40">{i.categoryName}</p>
                         </div>
-                        <div className="flex-1">
+                        <div className="order-last basis-full sm:order-none sm:basis-auto sm:flex-1">
                           <div className="relative h-2 overflow-hidden rounded-full bg-[#F1F4EE]">
                             <div
                               className={cn("h-full rounded-full", state === "out" ? "bg-red-500" : state === "low" ? "bg-amber-400" : "bg-[#8BC34A]")}
@@ -119,11 +119,11 @@ export default async function InventarioPage({
                             {i.min_stock > 0 && <span className="absolute inset-y-0 w-0.5 bg-[#1B1B1B]/25" style={{ left: "33.3%" }} title="Mínimo" />}
                           </div>
                         </div>
-                        <div className="w-36 text-right">
+                        <div className="text-right sm:w-36">
                           <p className="text-sm font-semibold text-[#1B1B1B]/80">{formatQty(i.stock, i.unit)}</p>
                           <p className="text-xs text-[#1B1B1B]/40">mín. {formatQty(i.min_stock, i.unit)}</p>
                         </div>
-                        <div className="w-20 text-right">
+                        <div className="text-right sm:w-20">
                           {state === "out" ? (
                             <StatusBadge tone="red">Agotado</StatusBadge>
                           ) : state === "low" ? (
@@ -152,7 +152,35 @@ export default async function InventarioPage({
             }
           >
             {movements && movements.length > 0 ? (
-              <div className="mt-5 overflow-x-auto">
+              <>
+              {/* Móvil: lista compacta */}
+              <ul className="mt-5 divide-y divide-[#1F4D36]/[0.05] border-t border-[#1F4D36]/[0.06] md:hidden">
+                {movements.map((m) => {
+                  const unit = (m.ingredients?.unit ?? "g") as Unit;
+                  const qty = Number(m.quantity);
+                  const detail = [m.reason && REASON[m.reason], m.note].filter(Boolean).join(" · ");
+                  return (
+                    <li key={m.id} className="px-5 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="min-w-0 truncate text-sm font-semibold text-[#1F4D36]">{m.ingredients?.name}</p>
+                        <p className={cn("shrink-0 text-sm font-semibold", qty > 0 ? "text-[#2E6B1F]" : "text-red-700")}>
+                          {qty > 0 ? "+" : "−"}
+                          {formatQty(Math.abs(qty), unit)}
+                        </p>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#1B1B1B]/50">
+                        <StatusBadge tone={KIND[m.kind]?.tone ?? "gray"}>{KIND[m.kind]?.label ?? m.kind}</StatusBadge>
+                        <span>
+                          {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" }).format(new Date(m.created_at))}
+                        </span>
+                        <span>· {m.profiles ? m.profiles.full_name.split(" ")[0] || m.profiles.email : "Sistema"}</span>
+                      </div>
+                      {detail && <p className="mt-1 truncate text-xs text-[#1B1B1B]/45">{detail}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="mt-5 hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[640px] text-left text-sm">
                   <thead>
                     <tr className="border-y border-[#1F4D36]/[0.06] bg-[#F8F7F2]/60 text-[11px] font-bold uppercase tracking-wider text-[#1B1B1B]/40">
@@ -200,6 +228,7 @@ export default async function InventarioPage({
                   </tbody>
                 </table>
               </div>
+              </>
             ) : (
               <div className="p-6">
                 <EmptyState icon={Boxes} title="Sin movimientos" />

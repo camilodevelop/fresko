@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { CalendarRange, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,7 @@ function PlanCard({ plan, index }: { plan: PublicPlan; index: number }) {
       </ul>
 
       <Button className="mt-8 w-full" variant={plan.featured ? "default" : "secondary"} asChild>
-        <a href="#suscripciones">Elegir plan</a>
+        <Link href={`/suscripcion/${plan.slug}`}>Elegir plan</Link>
       </Button>
     </motion.article>
   );

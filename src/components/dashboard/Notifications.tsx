@@ -154,7 +154,9 @@ export function NotificationBell({ align = "right" }: { align?: "right" | "left"
         <div
           className={cn(
             "absolute top-12 z-50 w-[min(380px,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-white shadow-2xl shadow-[#1F4D36]/15 ring-1 ring-[#1F4D36]/[0.08]",
-            align === "right" ? "right-0" : "left-0"
+            // En móvil ocupa el ancho de la pantalla para no cortarse.
+            "max-sm:fixed max-sm:inset-x-3 max-sm:top-16 max-sm:w-auto",
+            align === "right" ? "sm:right-0" : "sm:left-0"
           )}
         >
           <div className="flex items-center justify-between border-b border-[#1F4D36]/[0.06] px-4 py-3">
@@ -183,7 +185,7 @@ export function NotificationBell({ align = "right" }: { align?: "right" | "left"
               <p className="mt-2 text-sm text-[#1B1B1B]/50">No tienes notificaciones.</p>
             </div>
           ) : (
-            <ul className="max-h-[420px] overflow-y-auto py-1">
+            <ul className="max-h-[min(420px,calc(100dvh-10rem))] overflow-y-auto overscroll-contain py-1">
               {items.map((n) => {
                 const kind = KIND[n.kind] ?? KIND.info;
                 const Icon = kind.icon;

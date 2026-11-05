@@ -231,14 +231,14 @@ isOneToOne: false
                   ]
                 },"order_items": {
                   Row: {
-                    "id": string,"line_total": number,"name": string,"options": NonNullable<Json>,"order_id": string,"product_id": string | null,"quantity": number,"unit_price": number
+                    "id": string,"line_total": number,"name": string,"options": NonNullable<Json>,"order_id": string,"plan_value": number | null,"product_id": string | null,"quantity": number,"unit_price": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: string,"line_total": number,"name": string,"options"?: NonNullable<Json>,"order_id": string,"product_id"?: string | null,"quantity": number,"unit_price": number
+                    "id"?: string,"line_total": number,"name": string,"options"?: NonNullable<Json>,"order_id": string,"plan_value"?: number | null,"product_id"?: string | null,"quantity": number,"unit_price": number
                   }
                   Update: {
-                    "id"?: string,"line_total"?: number,"name"?: string,"options"?: NonNullable<Json>,"order_id"?: string,"product_id"?: string | null,"quantity"?: number,"unit_price"?: number
+                    "id"?: string,"line_total"?: number,"name"?: string,"options"?: NonNullable<Json>,"order_id"?: string,"plan_value"?: number | null,"product_id"?: string | null,"quantity"?: number,"unit_price"?: number
                   }
                   Relationships: [
                     {
@@ -263,14 +263,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "address_id": string | null,"address_snapshot": NonNullable<Json>,"cancelled_at": string | null,"code": string,"contact_name": string,"contact_phone": string,"created_at": string,"delivery_date": string,"delivery_fee": number,"id": string,"kind": string,"notes": string,"paid_at": string | null,"payment_status": string,"slot_id": string,"slot_label": string,"status": string,"subtotal": number,"total": number,"updated_at": string,"user_id": string,"zone_id": string
+                    "address_id": string | null,"address_snapshot": NonNullable<Json>,"cancelled_at": string | null,"code": string,"contact_name": string,"contact_phone": string,"created_at": string,"delivery_date": string,"delivery_fee": number,"id": string,"kind": string,"notes": string,"paid_at": string | null,"payment_status": string,"slot_id": string,"slot_label": string,"status": string,"subscription_id": string | null,"subtotal": number,"total": number,"updated_at": string,"user_id": string,"zone_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "address_id"?: string | null,"address_snapshot": NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivery_date": string,"delivery_fee"?: number,"id"?: string,"kind"?: string,"notes"?: string,"paid_at"?: string | null,"payment_status"?: string,"slot_id": string,"slot_label": string,"status"?: string,"subtotal": number,"total": number,"updated_at"?: string,"user_id": string,"zone_id": string
+                    "address_id"?: string | null,"address_snapshot": NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivery_date": string,"delivery_fee"?: number,"id"?: string,"kind"?: string,"notes"?: string,"paid_at"?: string | null,"payment_status"?: string,"slot_id": string,"slot_label": string,"status"?: string,"subscription_id"?: string | null,"subtotal": number,"total": number,"updated_at"?: string,"user_id": string,"zone_id": string
                   }
                   Update: {
-                    "address_id"?: string | null,"address_snapshot"?: NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivery_date"?: string,"delivery_fee"?: number,"id"?: string,"kind"?: string,"notes"?: string,"paid_at"?: string | null,"payment_status"?: string,"slot_id"?: string,"slot_label"?: string,"status"?: string,"subtotal"?: number,"total"?: number,"updated_at"?: string,"user_id"?: string,"zone_id"?: string
+                    "address_id"?: string | null,"address_snapshot"?: NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivery_date"?: string,"delivery_fee"?: number,"id"?: string,"kind"?: string,"notes"?: string,"paid_at"?: string | null,"payment_status"?: string,"slot_id"?: string,"slot_label"?: string,"status"?: string,"subscription_id"?: string | null,"subtotal"?: number,"total"?: number,"updated_at"?: string,"user_id"?: string,"zone_id"?: string
                   }
                   Relationships: [
                     {
@@ -284,6 +284,18 @@ isOneToOne: false
       columns: ["slot_id"]
 isOneToOne: false
       referencedRelation: "delivery_slots"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_subscription_id_fkey"
+      columns: ["subscription_id"]
+isOneToOne: false
+      referencedRelation: "subscription_usage"
+      referencedColumns: ["subscription_id"]
+    },{
+      foreignKeyName: "orders_subscription_id_fkey"
+      columns: ["subscription_id"]
+isOneToOne: false
+      referencedRelation: "subscriptions"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "orders_user_id_fkey"
@@ -467,6 +479,38 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"subscription_payments": {
+                  Row: {
+                    "amount": number,"created_at": string,"id": string,"kind": string,"order_id": string | null,"provider": string,"reference": string,"status": string,"subscription_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount": number,"created_at"?: string,"id"?: string,"kind": string,"order_id"?: string | null,"provider"?: string,"reference"?: string,"status": string,"subscription_id": string
+                  }
+                  Update: {
+                    "amount"?: number,"created_at"?: string,"id"?: string,"kind"?: string,"order_id"?: string | null,"provider"?: string,"reference"?: string,"status"?: string,"subscription_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "subscription_payments_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "subscription_payments_subscription_id_fkey"
+      columns: ["subscription_id"]
+isOneToOne: false
+      referencedRelation: "subscription_usage"
+      referencedColumns: ["subscription_id"]
+    },{
+      foreignKeyName: "subscription_payments_subscription_id_fkey"
+      columns: ["subscription_id"]
+isOneToOne: false
+      referencedRelation: "subscriptions"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"subscription_plans": {
                   Row: {
                     "active": boolean,"benefits": (string)[],"created_at": string,"description": string,"discount": number,"featured": boolean,"id": string,"name": string,"portions": number,"slug": string,"sort": number,"updated_at": string,"validity_days": number
@@ -480,6 +524,32 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"subscriptions": {
+                  Row: {
+                    "base_value": number,"code": string,"created_at": string,"discount": number,"expires_on": string,"id": string,"paid_at": string | null,"payment_status": string,"plan_id": string | null,"plan_name": string,"portions": number,"starts_on": string,"status": string,"total": number,"updated_at": string,"user_id": string,"validity_days": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "base_value": number,"code"?: string,"created_at"?: string,"discount": number,"expires_on": string,"id"?: string,"paid_at"?: string | null,"payment_status"?: string,"plan_id"?: string | null,"plan_name": string,"portions": number,"starts_on": string,"status"?: string,"total": number,"updated_at"?: string,"user_id": string,"validity_days": number
+                  }
+                  Update: {
+                    "base_value"?: number,"code"?: string,"created_at"?: string,"discount"?: number,"expires_on"?: string,"id"?: string,"paid_at"?: string | null,"payment_status"?: string,"plan_id"?: string | null,"plan_name"?: string,"portions"?: number,"starts_on"?: string,"status"?: string,"total"?: number,"updated_at"?: string,"user_id"?: string,"validity_days"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "subscriptions_plan_id_fkey"
+      columns: ["plan_id"]
+isOneToOne: false
+      referencedRelation: "subscription_plans"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "subscriptions_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"user_consents": {
                   Row: {
@@ -558,13 +628,35 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"subscription_usage": {
+                  Row: {
+                    "delivered_portions": number | null,"deliveries": number | null,"subscription_id": string,"used_portions": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Functions: {
             "cancel_my_order":
 { Args: { "p_order_id": string }; Returns: undefined
                            },
+"cancel_my_subscription":
+{ Args: { "p_subscription_id": string }; Returns: undefined
+                           },
+"cancel_subscription_delivery":
+{ Args: { "p_order_id": string }; Returns: undefined
+                           },
+"create_plan_order":
+{ Args: { "p_delivery": Json,"p_payment_status": string,"p_status": string,"p_sub": Omit<Database["public"]['Tables']["subscriptions"]['Row'], Database["public"]['Tables']["subscriptions"]['ComputedFields']> }; Returns: {
+              "order_code": string,"order_id": string,"portions": number,"value_sum": number
+            }[]
+                           },
 "delivery_date_allowed":
+{ Args: { "p_date": string,"p_zone_id": string }; Returns: boolean
+                           },
+"delivery_date_open":
 { Args: { "p_date": string,"p_zone_id": string }; Returns: boolean
                            },
 "has_permission":
@@ -573,6 +665,32 @@ isOneToOne: false
 "is_staff_role":
 { Args: { "rid": string }; Returns: boolean
                            },
+"my_active_subscription":
+{ Args: { "p_subscription_id": string }; Returns: {
+              "base_value": number,
+"code": string,
+"created_at": string,
+"discount": number,
+"expires_on": string,
+"id": string,
+"paid_at": string | null,
+"payment_status": string,
+"plan_id": string | null,
+"plan_name": string,
+"portions": number,
+"starts_on": string,
+"status": string,
+"total": number,
+"updated_at": string,
+"user_id": string,
+"validity_days": number
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "subscriptions"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "my_permissions":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
@@ -582,19 +700,54 @@ isOneToOne: false
 "pay_order_simulated":
 { Args: { "p_approve": boolean,"p_order_id": string }; Returns: string
                            },
+"pay_subscription_simulated":
+{ Args: { "p_approve": boolean,"p_subscription_id": string }; Returns: string
+                           },
 "place_order":
 { Args: { "p_address_id": string,"p_date": string,"p_items": Json,"p_notes"?: string,"p_slot_id": string }; Returns: {
               "order_code": string,"order_id": string
             }[]
                            },
+"purchase_subscription":
+{ Args: { "p_deliveries": Json,"p_plan_id": string }; Returns: {
+              "subscription_code": string,"subscription_id": string
+            }[]
+                           },
 "recompute_nutrition":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"resolve_plan_delivery":
+{ Args: { "p_delivery": Json,"p_last_day": string,"p_uid": string }; Returns: {
+              "address_id": string,"address_snapshot": Json,"delivery_date": string,"notes": string,"slot_id": string,"slot_label": string,"zone_id": string
+            }[]
+                           },
+"resolve_plan_items":
+{ Args: { "p_base": number,"p_items": Json }; Returns: {
+              "name": string,"options": Json,"plan_value": number,"product_id": string,"quantity": number,"unit_price": number
+            }[]
+                           },
+"schedule_subscription_delivery":
+{ Args: { "p_delivery": Json,"p_pay"?: boolean,"p_subscription_id": string }; Returns: {
+              "charged": number,"order_code": string,"order_id": string
+            }[]
                            },
 "set_order_status":
 { Args: { "p_note"?: string,"p_order_id": string,"p_status": string }; Returns: undefined
                            },
+"subscription_change_quote":
+{ Args: { "p_items": Json,"p_order_id": string,"p_subscription_id": string }; Returns: number
+                           },
+"subscription_used_portions":
+{ Args: { "p_subscription_id": string }; Returns: number
+                           },
 "sync_builder_option_images":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"today_local":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"update_subscription_delivery":
+{ Args: { "p_delivery": Json,"p_order_id": string,"p_pay"?: boolean }; Returns: number
                            },
 "zone_for_point":
 { Args: { "lat": number,"lng": number }; Returns: {

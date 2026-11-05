@@ -1,3 +1,4 @@
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, CreditCard, MapPin, MessageSquareText, PartyPopper } from "lucide-react";
@@ -25,7 +26,7 @@ export default async function PedidoDetallePage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, code, status, payment_status, total, subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, created_at, order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at)"
+      "id, code, kind, status, payment_status, total, subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, created_at, subscriptions(code, plan_name), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at)"
     )
     .eq("code", code.toUpperCase())
     .eq("user_id", session.userId)
@@ -38,6 +39,7 @@ export default async function PedidoDetallePage({
 
   return (
     <div>
+      <ScrollToTop />
       <OrderLiveRefresh orderId={order.id} />
       <PageHeader
         back={{ href: "/cuenta/pedidos", label: "Mis pedidos" }}
@@ -49,6 +51,11 @@ export default async function PedidoDetallePage({
           </span>
         }
         actions={
+          order.kind === "suscripcion" && order.subscriptions ? (
+            <Button variant="secondary" asChild>
+              <Link href={`/cuenta/suscripcion/${order.subscriptions.code}`}>Entrega de tu {order.subscriptions.plan_name} · Cambiarla</Link>
+            </Button>
+          ) : (
           order.status === "pendiente_pago" && (
             <div className="flex flex-wrap items-center gap-2">
               <CancelOrderButton orderId={order.id} />
@@ -58,6 +65,7 @@ export default async function PedidoDetallePage({
                 </Link>
               </Button>
             </div>
+          )
           )
         }
       />

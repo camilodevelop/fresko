@@ -120,19 +120,19 @@ export function BowlBuilderContent({
 
   return (
     <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
-      <div className="lg:col-span-4 lg:sticky lg:top-32 lg:self-start">
+      <div className="mx-auto w-full max-w-[280px] sm:max-w-[340px] lg:col-span-4 lg:sticky lg:top-32 lg:max-w-none lg:self-start">
         <BowlPreview parts={parts} />
       </div>
 
       <div className="lg:col-span-5">
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
           {BUILDER_STEPS.map((step) => (
             <button
               key={step.id}
               type="button"
               onClick={() => setActiveStep(step.id)}
               className={cn(
-                "rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-all",
+                "shrink-0 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-all",
                 activeStep === step.id
                   ? "bg-[#1F4D36] text-white shadow-md"
                   : "bg-white text-[#1F4D36]/70 hover:bg-[#1F4D36]/5"
@@ -270,6 +270,24 @@ export function BowlBuilderContent({
               Elige una base para continuar
             </p>
           )}
+        </div>
+      </div>
+      {/* Barra fija en móvil: total y botón siempre a mano */}
+      <div className="h-20 lg:hidden" aria-hidden />
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#1F4D36]/10 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(31,77,54,0.08)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-display text-xl font-bold leading-tight text-[#1F4D36]">{formatPrice(totalPrice)}</p>
+            <p className="truncate text-[11px] text-[#1B1B1B]/50">
+              {selections.base.length === 0
+                ? "Elige una base para continuar"
+                : `${summaryItems.length} ingrediente${summaryItems.length === 1 ? "" : "s"}${nutrition.kcal > 0 ? ` · ${Math.round(nutrition.kcal)} kcal` : ""}`}
+            </p>
+          </div>
+          <Button variant="fresh" disabled={selections.base.length === 0} type="button" onClick={addCustomBowlToCart}>
+            <ShoppingCart className="h-4 w-4" />
+            Agregar
+          </Button>
         </div>
       </div>
     </div>

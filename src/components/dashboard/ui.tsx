@@ -69,7 +69,7 @@ export function Panel({
       )}
     >
       {(title || actions) && (
-        <div className="flex items-start justify-between gap-4 px-6 pt-6">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 px-5 pt-5 sm:px-6 sm:pt-6">
           <div className="flex min-w-0 items-start gap-3">
             {Icon && (
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F4F8F2] text-[#1F4D36]">
@@ -81,10 +81,10 @@ export function Panel({
               {description && <p className="mt-0.5 text-sm text-[#1B1B1B]/50">{description}</p>}
             </div>
           </div>
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+          {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
         </div>
       )}
-      <div className={cn("p-6", (title || actions) && "pt-5", bodyClassName)}>{children}</div>
+      <div className={cn("p-5 sm:p-6", (title || actions) && "pt-5", bodyClassName)}>{children}</div>
     </section>
   );
 }
@@ -106,7 +106,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "rounded-3xl border p-5",
+        "rounded-3xl border p-4 sm:p-5",
         tone === "dark"
           ? "border-transparent bg-[#1F4D36] text-white"
           : tone === "fresh"
@@ -114,13 +114,13 @@ export function StatCard({
             : "border-[#1F4D36]/[0.07] bg-white"
       )}
     >
-      <div className="flex items-center justify-between">
-        <p className={cn("text-xs font-semibold", tone === "dark" ? "text-white/65" : "text-[#1B1B1B]/50")}>
+      <div className="flex items-start justify-between gap-2">
+        <p className={cn("text-xs font-semibold leading-snug", tone === "dark" ? "text-white/65" : "text-[#1B1B1B]/50")}>
           {label}
         </p>
         <span
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-xl",
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
             tone === "dark" ? "bg-white/10 text-[#C5E1A5]" : "bg-[#F4F8F2] text-[#1F4D36]"
           )}
         >
@@ -129,14 +129,14 @@ export function StatCard({
       </div>
       <p
         className={cn(
-          "mt-3 font-display text-2xl font-bold tracking-tight",
+          "mt-3 break-words font-display text-xl font-bold tracking-tight sm:text-2xl",
           tone === "dark" ? "text-white" : "text-[#1F4D36]"
         )}
       >
         {value}
       </p>
       {hint && (
-        <p className={cn("mt-1 text-xs", tone === "dark" ? "text-white/60" : "text-[#1B1B1B]/45")}>{hint}</p>
+        <p className={cn("mt-1 text-[11px] leading-snug sm:text-xs", tone === "dark" ? "text-white/60" : "text-[#1B1B1B]/45")}>{hint}</p>
       )}
     </div>
   );

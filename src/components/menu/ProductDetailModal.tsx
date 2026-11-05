@@ -39,22 +39,31 @@ export function ProductDetailModal({ item, onClose }: { item: MenuItem; onClose:
         if (e.target === e.currentTarget) onClose();
       }}
       aria-labelledby={`product-${item.id}-title`}
-      className="m-auto max-h-[92dvh] w-[min(960px,calc(100%-1.5rem))] overflow-hidden rounded-[2rem] bg-white p-0 text-left shadow-2xl shadow-[#1F4D36]/25 backdrop:bg-[#10291D]/55 backdrop:backdrop-blur-sm"
+      className="mb-0 mt-auto max-h-[94dvh] w-full max-w-full overflow-hidden rounded-t-[1.75rem] bg-white p-0 text-left shadow-2xl shadow-[#1F4D36]/25 backdrop:bg-[#10291D]/55 backdrop:backdrop-blur-sm md:m-auto md:max-h-[92dvh] md:w-[min(960px,calc(100%-3rem))] md:rounded-[2rem]"
     >
-      <div className="grid max-h-[92dvh] overflow-y-auto md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] md:overflow-hidden">
-        <div className="relative aspect-square bg-[radial-gradient(ellipse_80%_70%_at_50%_42%,#FFFFFF_0%,#F6F9F3_60%,#EAF2E3_100%)] md:aspect-auto md:min-h-[560px]">
+      <div className="grid max-h-[94dvh] overflow-y-auto overscroll-contain md:max-h-[92dvh] md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] md:overflow-hidden">
+        <div className="relative aspect-[4/3] bg-[radial-gradient(ellipse_80%_70%_at_50%_42%,#FFFFFF_0%,#F6F9F3_60%,#EAF2E3_100%)] sm:aspect-[16/10] md:aspect-auto md:min-h-[560px]">
+          <span className="absolute left-1/2 top-2 z-10 h-1.5 w-10 -translate-x-1/2 rounded-full bg-white/80 shadow-sm md:hidden" aria-hidden />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#1F4D36] shadow-md backdrop-blur md:hidden"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <Image src={item.image} alt={item.name} fill sizes="(max-width: 768px) 100vw, 480px" className={cn(isCutoutImage(item.image) ? "object-contain p-8 sm:p-12" : "object-cover")} priority />
           {item.tag && (
-            <span className="absolute left-5 top-5 rounded-full bg-[#8BC34A] px-3 py-1 text-xs font-bold text-[#1F4D36]">{item.tag}</span>
+            <span className="absolute left-4 top-4 rounded-full bg-[#8BC34A] px-3 py-1 text-xs font-bold text-[#1F4D36] md:left-5 md:top-5">{item.tag}</span>
           )}
         </div>
 
         <div className="flex flex-col md:max-h-[92dvh] md:overflow-y-auto">
-          <div className="flex-1 p-6 sm:p-8">
+          <div className="flex-1 p-5 sm:p-8">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#8BC34A]">{item.categoryName}</p>
-                <h2 id={`product-${item.id}-title`} className="mt-1 font-display text-3xl font-bold text-[#1F4D36]">
+                <h2 id={`product-${item.id}-title`} className="mt-1 font-display text-2xl font-bold text-[#1F4D36] sm:text-3xl">
                   {item.name}
                 </h2>
               </div>
@@ -62,7 +71,7 @@ export function ProductDetailModal({ item, onClose }: { item: MenuItem; onClose:
                 type="button"
                 onClick={onClose}
                 aria-label="Cerrar"
-                className="-mr-2 -mt-1 rounded-full p-2 text-[#1B1B1B]/40 transition-colors hover:bg-[#F4F8F2] hover:text-[#1F4D36]"
+                className="-mr-2 -mt-1 hidden rounded-full p-2 text-[#1B1B1B]/40 transition-colors hover:bg-[#F4F8F2] hover:text-[#1F4D36] md:block"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -103,7 +112,7 @@ export function ProductDetailModal({ item, onClose }: { item: MenuItem; onClose:
             )}
           </div>
 
-          <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-[#1F4D36]/[0.07] bg-white/95 px-6 py-4 backdrop-blur sm:px-8">
+          <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-[#1F4D36]/[0.07] bg-white/95 px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-8 sm:py-4">
             <div>
               <p className="text-[11px] text-[#1B1B1B]/45">{item.builder ? "Desde" : "Precio"}</p>
               <p className="font-display text-2xl font-bold text-[#1F4D36]">{formatPrice(item.price)}</p>

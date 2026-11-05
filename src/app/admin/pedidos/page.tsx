@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, ChefHat, ClipboardList, Package, Search, Truck, Wallet } from "lucide-react";
-import { EmptyState, PageHeader, Panel, StatCard } from "@/components/dashboard/ui";
+import { EmptyState, PageHeader, Panel, StatCard, StatusBadge } from "@/components/dashboard/ui";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { todayBogota } from "@/lib/account";
 import { ORDER_STATUS, formatDeliveryDate } from "@/lib/delivery";
@@ -27,7 +27,7 @@ export default async function AdminPedidosPage({
 
   let query = supabase
     .from("orders")
-    .select("id, code, status, payment_status, total, delivery_date, slot_label, created_at, contact_name, address_snapshot, zones(name), order_items(quantity)")
+    .select("id, code, kind, status, payment_status, total, delivery_date, slot_label, created_at, contact_name, address_snapshot, zones(name), order_items(quantity)")
     .order("delivery_date", { ascending: vista !== "todos" })
     .order("slot_label")
     .order("created_at", { ascending: false })
@@ -63,7 +63,7 @@ export default async function AdminPedidosPage({
         description="Todo lo que hay que preparar y entregar. Cambia el estado desde el detalle de cada pedido."
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard icon={ClipboardList} label="Pedidos para hoy" value={t.length} tone="dark" />
         <StatCard icon={ChefHat} label="Por preparar" value={count("confirmado")} hint={`${count("en_preparacion")} en preparación`} />
         <StatCard icon={Truck} label="En camino" value={count("en_camino")} hint={`${count("entregado")} entregados`} tone="fresh" />
@@ -74,16 +74,16 @@ export default async function AdminPedidosPage({
         bodyClassName="p-0"
         title={`${orders?.length ?? 0} pedidos`}
         actions={
-          <form className="flex flex-wrap items-center gap-2" action="/admin/pedidos">
+          <form className="flex w-full flex-wrap items-center gap-2 sm:w-auto" action="/admin/pedidos">
             <input type="hidden" name="vista" value={vista} />
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1B1B1B]/35" />
               <input
                 name="q"
                 defaultValue={q}
                 placeholder="FR-1001"
                 aria-label="Buscar por número"
-                className="h-9 w-32 rounded-full border border-[#1F4D36]/12 bg-[#F8F7F2] pl-9 pr-3 text-sm outline-none focus:border-[#8BC34A] focus:bg-white"
+                className="h-9 w-full rounded-full border sm:w-32 border-[#1F4D36]/12 bg-[#F8F7F2] pl-9 pr-3 text-sm outline-none focus:border-[#8BC34A] focus:bg-white"
               />
             </div>
             <input
@@ -91,7 +91,7 @@ export default async function AdminPedidosPage({
               name="fecha"
               defaultValue={fecha}
               aria-label="Fecha de entrega"
-              className="h-9 rounded-full border border-[#1F4D36]/12 bg-[#F8F7F2] px-3 text-sm"
+              className="h-9 min-w-0 flex-1 rounded-full border sm:flex-none border-[#1F4D36]/12 bg-[#F8F7F2] px-3 text-sm"
             />
             <button type="submit" className="h-9 rounded-full bg-[#1F4D36] px-4 text-xs font-semibold text-white">
               Filtrar
@@ -99,26 +99,26 @@ export default async function AdminPedidosPage({
           </form>
         }
       >
-        <div className="mt-4 flex flex-wrap gap-2 px-6">
+        <div className="mt-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-6 [&::-webkit-scrollbar]:hidden">
           {VIEWS.map((v) => (
             <Link
               key={v.id}
               href={`/admin/pedidos?vista=${v.id}`}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-semibold",
+                "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold",
                 vista === v.id && !fecha ? "bg-[#1F4D36] text-white" : "bg-[#F4F8F2] text-[#1F4D36]/70 hover:text-[#1F4D36]"
               )}
             >
               {v.label}
             </Link>
           ))}
-          <span className="mx-1 w-px bg-[#1F4D36]/10" />
+          <span className="mx-1 w-px shrink-0 bg-[#1F4D36]/10" />
           {["confirmado", "en_preparacion", "en_camino", "entregado", "cancelado"].map((s) => (
             <Link
               key={s}
               href={link({ estado: estado === s ? "" : s })}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-semibold",
+                "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold",
                 estado === s ? "bg-[#E8F3DC] text-[#1F4D36] ring-1 ring-[#8BC34A]" : "text-[#1B1B1B]/45 hover:text-[#1F4D36]"
               )}
             >
@@ -128,7 +128,38 @@ export default async function AdminPedidosPage({
         </div>
 
         {orders && orders.length > 0 ? (
-          <div className="mt-4 overflow-x-auto">
+          <>
+          {/* Móvil: tarjetas */}
+          <ul className="mt-4 divide-y divide-[#1F4D36]/[0.06] border-t border-[#1F4D36]/[0.06] md:hidden">
+            {orders.map((o) => {
+              const addr = o.address_snapshot as { address: string };
+              const items = o.order_items.reduce((s, i) => s + i.quantity, 0);
+              return (
+                <li key={o.id}>
+                  <Link href={`/admin/pedidos/${o.code}`} className="block px-5 py-4 active:bg-[#F8F7F2]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-display font-bold text-[#1F4D36]">{o.code}</span>
+                      <span className="font-semibold text-[#1F4D36]">{formatPrice(o.total)}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-[#1B1B1B]/70">
+                      <span className={cn("font-medium", o.delivery_date === today && "text-[#1F4D36]")}>
+                        {o.delivery_date === today ? "Hoy" : formatDeliveryDate(o.delivery_date, { weekday: "short", day: "numeric", month: "short" }, true)}
+                      </span>{" "}
+                      · {o.slot_label} · {items} {items === 1 ? "plato" : "platos"}
+                    </p>
+                    <p className="truncate text-xs text-[#1B1B1B]/45">
+                      {o.contact_name || "Sin nombre"} · {addr.address}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <OrderStatusBadge status={o.status} />
+                      {o.kind === "suscripcion" ? <StatusBadge tone="blue" dot={false}>Plan</StatusBadge> : <PaymentStatusBadge status={o.payment_status} />}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full min-w-[860px] text-left text-sm">
               <thead>
                 <tr className="border-y border-[#1F4D36]/[0.06] bg-[#F8F7F2]/60 text-[11px] font-bold uppercase tracking-wider text-[#1B1B1B]/40">
@@ -152,7 +183,7 @@ export default async function AdminPedidosPage({
                           {o.code}
                         </Link>
                         <div className="mt-0.5">
-                          <PaymentStatusBadge status={o.payment_status} />
+                          {o.kind === "suscripcion" ? <StatusBadge tone="blue" dot={false}>Plan</StatusBadge> : <PaymentStatusBadge status={o.payment_status} />}
                         </div>
                       </td>
                       <td className="px-3 py-3">
@@ -177,6 +208,7 @@ export default async function AdminPedidosPage({
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <div className="p-6">
             <EmptyState

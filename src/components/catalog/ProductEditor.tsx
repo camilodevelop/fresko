@@ -159,7 +159,7 @@ export function ProductEditor({
       <div className="space-y-6">
         <Panel title="Información" description="Lo que ve el cliente en el menú.">
           <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
-            <div>
+            <div className="mx-auto w-full max-w-[220px] md:max-w-none">
               <ProductImagePicker
                 value={p.imageUrl}
                 uploading={uploading}
@@ -263,12 +263,12 @@ export function ProductEditor({
                 </div>
                 {lines.map((line, index) => (
                   <div key={index}>
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl bg-[#F8F7F2] p-2 sm:grid-cols-[minmax(0,1fr)_130px_110px_36px] sm:bg-transparent sm:p-0">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto_36px] items-center gap-2 rounded-2xl bg-[#F8F7F2] p-2 sm:grid-cols-[minmax(0,1fr)_130px_110px_36px] sm:gap-3 sm:bg-transparent sm:p-0">
                     <select
                       {...v.field(`recipe-${index}`)}
                       aria-label={`Ingrediente ${index + 1}`}
                       aria-invalid={v.error(`recipe-${index}`) && !line.ingredientId ? true : undefined}
-                      className={selectClass}
+                      className={cn(selectClass, "col-span-3 sm:col-span-1")}
                       value={line.ingredientId}
                       onChange={(e) =>
                         update({ recipe: p.recipe.map((r, i) => (i === index ? { ...r, ingredientId: e.target.value } : r)) })

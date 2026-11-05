@@ -96,3 +96,13 @@ textarea[aria-invalid="true"]:focus {
 .scroll-dark::-webkit-scrollbar-thumb:hover {
   background: rgb(255 255 255 / 0.45);
 }
+
+/*
+ * Responsive: un elemento de grid no puede encogerse por debajo de su contenido
+ * (min-width: auto), y en móvil un texto largo o una tabla empujan la página hacia
+ * los lados. Con min-width: 0 las columnas respetan el ancho de la pantalla.
+ * :where() deja la especificidad en cero para que min-w-* siga funcionando.
+ */
+:where(.grid) > * {
+  min-width: 0;
+}

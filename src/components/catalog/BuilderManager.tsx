@@ -76,9 +76,13 @@ function OptionRow({
   return (
     <form
       {...v.formProps(() => dirty && save())}
-      className={cn("grid items-start gap-2 rounded-2xl p-2 md:grid-cols-[44px_1fr_1fr_100px_130px_auto]", !o.active && "opacity-55", dirty && "bg-[#FFFBEB]")}
+      className={cn(
+        "grid grid-cols-6 items-start gap-2 rounded-2xl p-2 max-md:border max-md:border-[#1F4D36]/[0.07] md:grid-cols-[44px_1fr_1fr_100px_130px_auto]",
+        !o.active && "opacity-55",
+        dirty && "bg-[#FFFBEB]"
+      )}
     >
-      <div className="flex items-center gap-1">
+      <div className="col-span-1 flex items-center gap-1">
         <input
           aria-label="Emoji"
           className="h-10 w-11 rounded-xl border border-[#1F4D36]/15 bg-white text-center text-lg"
@@ -87,7 +91,7 @@ function OptionRow({
           onChange={(e) => set({ emoji: e.target.value })}
         />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="col-span-5 flex items-center gap-2 md:col-span-1">
         <span
           className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-[#F4F8F2]"
           title={ing?.image ? "Foto del ingrediente" : "Sin foto: se muestra el emoji. Súbela en Catálogo → Ingredientes."}
@@ -104,7 +108,8 @@ function OptionRow({
         </div>
       </div>
       <select
-        className="h-10 rounded-xl border border-[#1F4D36]/15 bg-white px-3 text-sm"
+        aria-label="Ingrediente"
+        className="col-span-6 h-10 rounded-xl border border-[#1F4D36]/15 bg-white px-3 text-sm md:col-span-1"
         value={o.ingredientId ?? ""}
         onChange={(e) => set({ ingredientId: e.target.value || null })}
       >
@@ -113,7 +118,7 @@ function OptionRow({
           <option key={i.id} value={i.id}>{i.name}</option>
         ))}
       </select>
-      <div>
+      <div className="col-span-3 md:col-span-1">
         <div className="relative">
           <Input
             {...v.field("quantity")}
@@ -129,7 +134,7 @@ function OptionRow({
         </div>
         <FieldError name={v.idFor("quantity")} error={v.error("quantity")} />
       </div>
-      <div>
+      <div className="col-span-3 md:col-span-1">
         <div className="relative">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#1B1B1B]/40">+$</span>
           <Input
@@ -153,7 +158,8 @@ function OptionRow({
           </button>
         )}
       </div>
-      <div className="flex items-center justify-end gap-2">
+      <div className="col-span-6 flex items-center justify-end gap-2 md:col-span-1">
+        <span className="mr-auto text-xs text-[#1B1B1B]/45 md:hidden">{o.active ? "Activa" : "Inactiva"}</span>
         <Switch size="sm" label="Activa" checked={o.active} onChange={(v) => set({ active: v })} />
         <Button size="sm" type="submit" variant={dirty ? "default" : "ghost"} disabled={pending || !dirty}>
           {dirty ? "Guardar" : <Check className="h-4 w-4" />}
@@ -207,7 +213,7 @@ export function BuilderManager({
               <span>Valor extra</span>
               <span />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2 md:space-y-1">
               {list.map((o) => (
                 <OptionRow
                   key={o.id}

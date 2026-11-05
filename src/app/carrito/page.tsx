@@ -1,3 +1,4 @@
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import type { Metadata } from "next";
 import { CheckoutView } from "@/components/cart/CheckoutView";
 import { Footer } from "@/components/layout/Footer";
@@ -27,6 +28,7 @@ export default async function CarritoPage() {
   return (
     <>
       <Navbar />
+      <ScrollToTop />
       <main className="min-h-screen bg-[#F8F7F2] pt-24 pb-16">
         <CheckoutView
           signedIn={Boolean(session)}
