@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import { CartProvider } from "@/components/cart/CartProvider";
+import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 const inter = Inter({
@@ -46,6 +47,7 @@ export default function RootLayout({
     <html lang="es" className={`${inter.variable} ${poppins.variable}`}>
       <body className="min-h-screen antialiased">
         <CartProvider>{children}</CartProvider>
+        <Toaster />
       </body>
     </html>
   );

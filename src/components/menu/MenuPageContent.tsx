@@ -1,41 +1,33 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MenuProductCard } from "@/components/menu/MenuProductCard";
-import {
-  MENU_ITEMS,
-  MENU_TABS,
-  type MenuCategory,
-} from "@/lib/data/products";
+import type { MenuCategory, MenuItem } from "@/lib/data/products";
 import { WHATSAPP_URL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-const VALID_CATEGORIES = new Set<MenuCategory>(["all", "ensaladas", "bowls"]);
-
-function parseCategory(param: string | null): MenuCategory {
-  if (param && VALID_CATEGORIES.has(param as MenuCategory)) {
-    return param as MenuCategory;
-  }
-  return "all";
-}
-
-export function MenuPageContent() {
+export function MenuPageContent({ items, categories }: { items: MenuItem[]; categories: MenuCategory[] }) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<MenuCategory>("all");
-
-  useEffect(() => {
-    setActiveTab(parseCategory(searchParams.get("categoria")));
-  }, [searchParams]);
+  const router = useRouter();
+  const tabs = useMemo(
+    () => [{ id: "all", label: "Todos" }, ...categories.map((c) => ({ id: c.slug, label: c.name }))],
+    [categories]
+  );
+  // La pestaña activa vive en la URL (?categoria=slug), así se puede compartir.
+  const param = searchParams.get("categoria");
+  const activeTab = param && categories.some((c) => c.slug === param) ? param : "all";
+  const setActiveTab = (id: string) =>
+    router.replace(id === "all" ? "/menu" : `/menu?categoria=${id}`, { scroll: false });
 
   const filteredItems = useMemo(() => {
-    if (activeTab === "all") return MENU_ITEMS;
-    return MENU_ITEMS.filter((item) => item.category === activeTab);
-  }, [activeTab]);
+    if (activeTab === "all") return items;
+    return items.filter((item) => item.category === activeTab);
+  }, [activeTab, items]);
 
   return (
     <>
@@ -74,7 +66,7 @@ export function MenuPageContent() {
             role="tablist"
             aria-label="Categorías del menú"
           >
-            {MENU_TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"

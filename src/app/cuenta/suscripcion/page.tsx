@@ -23,7 +23,7 @@ export default function SuscripcionPage() {
         }
       />
 
-      <div className="grid items-start gap-6 xl:grid-cols-[1fr_320px]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="relative overflow-hidden rounded-[28px] border-2 border-[#8BC34A] bg-white p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

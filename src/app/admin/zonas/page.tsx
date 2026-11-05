@@ -27,7 +27,7 @@ export default async function ZonasPage() {
         description="País → ciudad → zona. Cada zona tiene su polígono en el mapa, su hora de corte, sus días y sus franjas."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">
           {(countries ?? []).map((country) => (
             <Panel

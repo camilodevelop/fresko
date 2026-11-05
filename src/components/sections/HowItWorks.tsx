@@ -21,7 +21,7 @@ const steps = [
   {
     icon: Leaf,
     title: "Recibe fresco",
-    description: "Lo recibes fresco y con envio gratis",
+    description: "Lo recibes fresco y con envío gratis",
   },
 ];
 

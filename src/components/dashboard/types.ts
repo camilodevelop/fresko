@@ -10,7 +10,8 @@ export type NavIcon =
   | "chef"
   | "truck"
   | "salad"
-  | "boxes";
+  | "boxes"
+  | "sliders";
 
 export type NavItem = {
   href: string;

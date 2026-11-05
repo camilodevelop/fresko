@@ -8,6 +8,17 @@ import { NotificationBell } from "./Notifications";
 import { UserMenu } from "./UserMenu";
 import type { SidebarUser } from "./Sidebar";
 
+const SUBSECTIONS: Record<string, string> = {
+  nueva: "Nueva",
+  nuevo: "Nuevo",
+  ingredientes: "Ingredientes",
+  categorias: "Categorías",
+  planes: "Planes",
+  precios: "Precios sugeridos",
+  armador: "Armador",
+  ajustes: "Ajustes",
+};
+
 function crumbs(pathname: string, homeHref: string, groups: NavGroup[]) {
   const match = groups
     .flatMap((g) => g.items)
@@ -15,7 +26,10 @@ function crumbs(pathname: string, homeHref: string, groups: NavGroup[]) {
     .sort((a, b) => b.href.length - a.href.length)[0];
   if (!match) return [];
   const list: { label: string; href?: string }[] = [{ label: match.label, href: match.href }];
-  if (pathname !== match.href) list.push({ label: pathname.endsWith("/nueva") ? "Nueva" : "Detalle" });
+  if (pathname !== match.href) {
+    const segment = pathname.slice(match.href.length + 1).split("/")[0];
+    list.push({ label: SUBSECTIONS[segment] ?? "Detalle" });
+  }
   return list;
 }
 

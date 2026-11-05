@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@/lib/notify";
+
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -8,8 +10,6 @@ import { BowlPreview } from "@/components/bowl-builder/BowlPreview";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart/CartProvider";
 import {
-  BASE_BOWL_PRICE,
-  BUILDER_OPTIONS,
   BUILDER_STEPS,
   type BuilderOption,
   type BuilderStep,
@@ -26,7 +26,17 @@ const initialSelections: Selections = {
   sauce: [],
 };
 
-export function BowlBuilderContent() {
+export function BowlBuilderContent({
+  options: BUILDER_OPTIONS,
+  basePrice: BASE_BOWL_PRICE,
+  productSlug,
+  productName,
+}: {
+  options: Record<BuilderStep, BuilderOption[]>;
+  basePrice: number;
+  productSlug: string;
+  productName: string;
+}) {
   const router = useRouter();
   const { addItem } = useCart();
   const [activeStep, setActiveStep] = useState<BuilderStep>("base");
@@ -62,12 +72,12 @@ export function BowlBuilderContent() {
       }
     }
     return options;
-  }, [selections]);
+  }, [selections, BUILDER_OPTIONS]);
 
   const totalPrice = useMemo(() => {
     const extras = selectedOptions.reduce((sum, o) => sum + o.price, 0);
     return BASE_BOWL_PRICE + extras;
-  }, [selectedOptions]);
+  }, [selectedOptions, BASE_BOWL_PRICE]);
 
   const summaryItems = useMemo(() => {
     return BUILDER_STEPS.flatMap((step) =>
@@ -76,18 +86,19 @@ export function BowlBuilderContent() {
         return opt ? { step: step.label, name: opt.name, price: opt.price } : null;
       })
     ).filter(Boolean) as { step: string; name: string; price: number }[];
-  }, [selections]);
+  }, [selections, BUILDER_OPTIONS]);
 
   const addCustomBowlToCart = () => {
     if (selections.base.length === 0) return;
     addItem({
-      id: "custom-bowl",
-      name: "Bowl personalizado",
+      id: productSlug,
+      name: `${productName} (personalizado)`,
       price: totalPrice,
       image: "/images/bowl.png",
       details: summaryItems.map((item) => item.name).join(", "),
       unique: true,
     });
+    toast.success(`${productName} agregado al carrito`, { description: summaryItems.map((item) => item.name).join(", ") });
     router.push("/carrito");
   };
 

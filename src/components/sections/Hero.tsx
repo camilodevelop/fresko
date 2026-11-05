@@ -22,7 +22,7 @@ const badges = [
 
 const heroStats = [
   { value: "15+", label: "Combos" },
-  { value: "Gratis", label: "Envio" },
+  { value: "Gratis", label: "Envío" },
   { value: "4.9★", label: "Rating" },
 ];
 

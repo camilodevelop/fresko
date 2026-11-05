@@ -10,24 +10,30 @@ import { HowItWorks } from "@/components/sections/HowItWorks";
 import { Subscriptions } from "@/components/sections/Subscriptions";
 import { Testimonials } from "@/components/sections/Testimonials";
 import { getActiveZones } from "@/lib/data/zones";
+import { getCategories, getMenuItems, getPlans } from "@/lib/data/catalog";
 
 // Las zonas se editan en el panel; la landing se regenera al guardar y cada 5 min.
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const zones = await getActiveZones();
+  const [zones, featured, categories, { plans }] = await Promise.all([
+    getActiveZones(),
+    getMenuItems({ featuredOnly: true }),
+    getCategories(),
+    getPlans(),
+  ]);
   return (
     <>
       <Navbar />
       <main>
         <Hero />
         <PromoBenefitsBar />
-        <Categories />
+        <Categories categories={categories} />
         <CoverageValidator zones={zones} />
         <BowlBuilderTeaser />
-        <MenuTeaser />
+        <MenuTeaser items={featured} />
         <HowItWorks />
-        <Subscriptions />
+        <Subscriptions plans={plans} />
         <Testimonials />
       </main>
       <Footer />

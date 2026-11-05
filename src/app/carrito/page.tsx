@@ -72,7 +72,7 @@ export default function CarritoPage() {
               </Button>
             </div>
           ) : (
-            <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
+            <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-6">
                 <div className="flex rounded-full bg-white p-1">
                   {(

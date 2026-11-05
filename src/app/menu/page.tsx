@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { MenuPageContent } from "@/components/menu/MenuPageContent";
+import { getCategories, getMenuItems } from "@/lib/data/catalog";
+
+// El catálogo se edita en el panel; se regenera al guardar y cada 5 min.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Menú | FRESKO — Bowls y ensaladas en Bogotá",
@@ -10,7 +14,8 @@ export const metadata: Metadata = {
     "Explora nuestro menú completo: bowls Basic, Premium y Full / Pokes. Ingredientes frescos, precios desde $9.500.",
 };
 
-export default function MenuPage() {
+export default async function MenuPage() {
+  const [items, categories] = await Promise.all([getMenuItems(), getCategories()]);
   return (
     <>
       <Navbar />
@@ -22,7 +27,7 @@ export default function MenuPage() {
             </div>
           }
         >
-          <MenuPageContent />
+          <MenuPageContent items={items} categories={categories} />
         </Suspense>
       </main>
       <Footer />

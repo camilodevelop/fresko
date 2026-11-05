@@ -19,6 +19,7 @@ import {
   Repeat,
   Salad,
   Shield,
+  SlidersHorizontal,
   Truck,
   UserRound,
   Users,
@@ -44,6 +45,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   truck: Truck,
   salad: Salad,
   boxes: Boxes,
+  sliders: SlidersHorizontal,
 };
 
 export type SidebarUser = {

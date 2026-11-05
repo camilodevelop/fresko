@@ -61,7 +61,7 @@ export default async function CuentaHomePage() {
         <StatCard icon={Package} label="Plan vigente hasta" value={formatShortDate(plan.endsOn)} hint="Renuévalo antes para no perder tu calendario" />
       </div>
 
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Panel
           title="Próximas entregas"
           description="Cambia los platos o la franja de cada día hasta la hora de corte."

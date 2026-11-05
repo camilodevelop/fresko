@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { CATEGORY_LABELS, type MenuItem } from "@/lib/data/products";
+import type { MenuItem } from "@/lib/data/products";
 import { formatPrice } from "@/lib/utils";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
@@ -42,7 +42,7 @@ function CardContent({ item }: { item: MenuItem }) {
       </div>
       <div className="flex flex-1 flex-col p-5 sm:p-6">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[#8BC34A]">
-          {CATEGORY_LABELS[item.category]}
+          {item.categoryName}
         </p>
         <h2 className="mt-1 font-display text-xl font-bold text-[#1F4D36]">
           {item.name}
@@ -54,9 +54,9 @@ function CardContent({ item }: { item: MenuItem }) {
           <span className="font-display text-2xl font-bold text-[#1F4D36]">
             {formatPrice(item.price)}
           </span>
-          {item.id === "custom" ? (
+          {item.builder ? (
             <Button size="sm" variant="secondary" asChild>
-              <Link href="/arma-tu-bowl">Armar</Link>
+              <Link href={`/arma-tu-bowl?producto=${item.id}`}>Armar</Link>
             </Button>
           ) : (
             <AddToCartButton item={item} />

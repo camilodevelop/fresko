@@ -2,6 +2,7 @@
 
 import { useOptimistic, useTransition } from "react";
 import { Switch } from "@/components/ui/switch";
+import { notify } from "@/lib/notify";
 import { setUserRole } from "./actions";
 
 export function UserRoleToggle({
@@ -28,7 +29,7 @@ export function UserRoleToggle({
       onChange={(next) =>
         startTransition(async () => {
           setOptimistic(next);
-          await setUserRole(userId, roleId, next);
+          notify(await setUserRole(userId, roleId, next));
         })
       }
     />

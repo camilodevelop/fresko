@@ -6,7 +6,11 @@ import { Camera, KeyRound, Loader2, Trash2, UserRound } from "lucide-react";
 import { setAvatar, updateContact, updatePassword, type ActionState } from "@/app/actions/profile";
 import { UserAvatar } from "@/components/dashboard/UserAvatar";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { first, rules } from "@/lib/validation";
+import { notify, toast } from "@/lib/notify";
 import { createClient } from "@/lib/supabase/client";
 
 export type ProfileData = {
@@ -18,7 +22,6 @@ export type ProfileData = {
   hasPassword: boolean;
 };
 
-const fieldLabel = "block text-xs font-semibold text-[#1B1B1B]/60";
 
 function Card({
   icon: Icon,
@@ -47,12 +50,6 @@ function Card({
   );
 }
 
-function Feedback({ state }: { state: ActionState }) {
-  if (state.error) return <p className="text-sm text-red-700">{state.error}</p>;
-  if (state.ok) return <p className="text-sm font-medium text-[#1F4D36]">{state.ok}</p>;
-  return null;
-}
-
 /** Recorta al centro y reduce a 400×400 WebP antes de subir. */
 async function toSquareWebp(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -70,18 +67,17 @@ async function toSquareWebp(file: File): Promise<Blob> {
 function AvatarCard({ profile }: { profile: ProfileData }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [state, setState] = useState<ActionState>({});
   const [preview, setPreview] = useState(profile.avatarUrl);
   const [pending, startTransition] = useTransition();
 
   const onFile = (file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setState({ error: "El archivo debe ser una imagen." });
+      toast.error("El archivo debe ser una imagen.");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      setState({ error: "La imagen pesa más de 10 MB." });
+      toast.error("La imagen pesa más de 10 MB.");
       return;
     }
     startTransition(async () => {
@@ -92,23 +88,19 @@ function AvatarCard({ profile }: { profile: ProfileData }) {
           .storage.from("avatars")
           .upload(path, blob, { contentType: "image/webp", upsert: false });
         if (error) throw error;
-        const result = await setAvatar(path);
-        setState(result);
-        if (!result.error) {
+        if (notify(await setAvatar(path))) {
           setPreview(URL.createObjectURL(blob));
           router.refresh();
         }
       } catch {
-        setState({ error: "No se pudo subir la foto. Intenta con otra imagen." });
+        toast.error("No se pudo subir la foto. Intenta con otra imagen.");
       }
     });
   };
 
   const remove = () =>
     startTransition(async () => {
-      const result = await setAvatar(null);
-      setState(result);
-      if (!result.error) {
+      if (notify(await setAvatar(null))) {
         setPreview(null);
         router.refresh();
       }
@@ -148,44 +140,43 @@ function AvatarCard({ profile }: { profile: ProfileData }) {
           )}
         </div>
       </div>
-      <div className="mt-3">
-        <Feedback state={state} />
-      </div>
     </Card>
   );
 }
 
 function ContactCard({ profile }: { profile: ProfileData }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(updateContact, {});
+  const v = useFormValidation(
+    (f) => ({
+      full_name: rules.required(f.full_name, "Escribe tu nombre."),
+      phone: rules.phoneCO(f.phone),
+      email: first(rules.required(f.email, "Escribe tu correo."), rules.email(f.email)),
+    }),
+    undefined,
+    "contact"
+  );
+  const [, action, pending] = useActionState<ActionState, FormData>(async (prev, data) => {
+    const r = await updateContact(prev, data);
+    notify(r);
+    return r;
+  }, {});
   return (
     <Card icon={UserRound} title="Datos de contacto" description="Los usamos para coordinar tus entregas.">
-      <form action={action} className="space-y-4">
-        <label className={fieldLabel}>
-          Nombre completo
-          <Input name="full_name" defaultValue={profile.fullName} autoComplete="name" className="mt-1.5" required />
-        </label>
+      <form action={action} {...v.formProps()} className="space-y-4">
+        <Field label="Nombre completo" name={v.idFor("full_name")} error={v.error("full_name")}>
+          <Input {...v.field("full_name")} defaultValue={profile.fullName} autoComplete="name" />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className={fieldLabel}>
-            Celular
-            <Input
-              name="phone"
-              defaultValue={profile.phone}
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="3001234567"
-              className="mt-1.5"
-            />
-          </label>
-          <label className={fieldLabel}>
-            Correo
-            <Input name="email" type="email" defaultValue={profile.email} autoComplete="email" className="mt-1.5" required />
-          </label>
+          <Field label="Celular" optional name={v.idFor("phone")} error={v.error("phone")} hint="10 dígitos, por ejemplo 3001234567.">
+            <Input {...v.field("phone")} defaultValue={profile.phone} inputMode="tel" autoComplete="tel" placeholder="3001234567" />
+          </Field>
+          <Field label="Correo" name={v.idFor("email")} error={v.error("email")}>
+            <Input {...v.field("email")} type="email" inputMode="email" defaultValue={profile.email} autoComplete="email" />
+          </Field>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando…" : "Guardar cambios"}
           </Button>
-          <Feedback state={state} />
         </div>
       </form>
     </Card>
@@ -193,10 +184,21 @@ function ContactCard({ profile }: { profile: ProfileData }) {
 }
 
 function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
-  const formRef = useRef<HTMLFormElement>(null);
-  const [state, action, pending] = useActionState<ActionState, FormData>(async (prev, data) => {
+  const v = useFormValidation(
+    (f) => ({
+      current: hasPassword ? rules.required(f.current, "Escribe tu contraseña actual.") : null,
+      password: first(rules.required(f.password, "Escribe la nueva contraseña."), rules.minLength(f.password, 8, "Usa al menos 8 caracteres.")),
+      confirm: first(
+        rules.required(f.confirm, "Repite la nueva contraseña."),
+        rules.equals(f.confirm, f.password, "Las contraseñas no coinciden.")
+      ),
+    }),
+    undefined,
+    "password"
+  );
+  const [, action, pending] = useActionState<ActionState, FormData>(async (prev, data) => {
     const result = await updatePassword(prev, data);
-    if (result.ok) formRef.current?.reset();
+    if (notify(result)) v.resetForm();
     return result;
   }, {});
 
@@ -206,32 +208,28 @@ function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
       title={hasPassword ? "Contraseña" : "Crear contraseña"}
       description={
         hasPassword
-          ? "Mínimo 8 caracteres."
+          ? "Para cambiarla te pedimos la actual."
           : "Entras con Google. Si quieres, crea una contraseña para entrar también con tu correo."
       }
     >
-      <form ref={formRef} action={action} className="space-y-4">
+      <form action={action} {...v.formProps()} className="space-y-4">
         {hasPassword && (
-          <label className={fieldLabel}>
-            Contraseña actual
-            <Input name="current" type="password" autoComplete="current-password" className="mt-1.5" required />
-          </label>
+          <Field label="Contraseña actual" name={v.idFor("current")} error={v.error("current")}>
+            <Input {...v.field("current")} type="password" autoComplete="current-password" />
+          </Field>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className={fieldLabel}>
-            Nueva contraseña
-            <Input name="password" type="password" autoComplete="new-password" minLength={8} className="mt-1.5" required />
-          </label>
-          <label className={fieldLabel}>
-            Confirmar
-            <Input name="confirm" type="password" autoComplete="new-password" minLength={8} className="mt-1.5" required />
-          </label>
+          <Field label="Nueva contraseña" name={v.idFor("password")} error={v.error("password")} hint="Mínimo 8 caracteres.">
+            <Input {...v.field("password")} type="password" autoComplete="new-password" />
+          </Field>
+          <Field label="Confirmar" name={v.idFor("confirm")} error={v.error("confirm")}>
+            <Input {...v.field("confirm")} type="password" autoComplete="new-password" />
+          </Field>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <Button type="submit" variant="secondary" disabled={pending}>
             {pending ? "Guardando…" : hasPassword ? "Cambiar contraseña" : "Crear contraseña"}
           </Button>
-          <Feedback state={state} />
         </div>
       </form>
     </Card>

@@ -5,9 +5,9 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductsCarousel } from "@/components/sections/ProductsCarousel";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { MOST_ORDERED_PRODUCTS } from "@/lib/data/products";
+import type { MenuItem } from "@/lib/data/products";
 
-export function MenuTeaser() {
+export function MenuTeaser({ items }: { items: MenuItem[] }) {
   return (
     <section className="py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -27,7 +27,7 @@ export function MenuTeaser() {
           </Button>
         </div>
 
-        <ProductsCarousel items={MOST_ORDERED_PRODUCTS} />
+        <ProductsCarousel items={items} />
       </div>
     </section>
   );

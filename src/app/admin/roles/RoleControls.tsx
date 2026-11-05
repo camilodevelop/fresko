@@ -1,6 +1,10 @@
 "use client";
 
 import { useActionState, useOptimistic, useTransition } from "react";
+import { Field } from "@/components/ui/field";
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { first, rules } from "@/lib/validation";
+import { notify } from "@/lib/notify";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,17 +12,31 @@ import { Switch } from "@/components/ui/switch";
 import { createRole, deleteRole, setRolePermission, type FormState } from "./actions";
 
 export function CreateRoleForm() {
-  const [state, action, pending] = useActionState<FormState, FormData>(createRole, {});
+  const v = useFormValidation(
+    (f) => ({
+      name: first(rules.required(f.name, "Escribe el nombre del rol."), rules.minLength(f.name, 3, "Usa al menos 3 caracteres.")),
+    }),
+    undefined,
+    "role"
+  );
+  const [, action, pending] = useActionState<FormState, FormData>(async (prev, data) => {
+    const r = await createRole(prev, data);
+    if (notify(r)) v.resetForm();
+    return r;
+  }, {});
   return (
-    <form action={action} className="space-y-3">
-      <div className="flex flex-col gap-3 md:flex-row">
-        <Input name="name" placeholder="Nombre (ej. Bodega)" required className="h-11 md:max-w-60" />
-        <Input name="description" placeholder="¿Qué hace este rol? (opcional)" className="h-11" />
-        <Button type="submit" disabled={pending} className="shrink-0">
+    <form action={action} {...v.formProps()} className="space-y-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start">
+        <Field name={v.idFor("name")} error={v.error("name")} className="md:w-60">
+          <Input {...v.field("name")} placeholder="Nombre (ej. Bodega)" className="h-11" />
+        </Field>
+        <Field name={v.idFor("description")} className="flex-1">
+          <Input {...v.field("description")} placeholder="¿Qué hace este rol? (opcional)" className="h-11" />
+        </Field>
+        <Button type="submit" disabled={pending} className="h-11 shrink-0">
           <Plus className="h-4 w-4" /> Crear rol
         </Button>
       </div>
-      {state.error && <p className="text-sm text-red-700">{state.error}</p>}
     </form>
   );
 }
@@ -50,7 +68,7 @@ export function PermissionToggle({
         onChange={(next) =>
           startTransition(async () => {
             setOptimistic(next);
-            await setRolePermission(roleId, permission, next);
+            notify(await setRolePermission(roleId, permission, next));
           })
         }
       />
@@ -66,7 +84,7 @@ export function DeleteRoleButton({ roleId, name }: { roleId: string; name: strin
       size="sm"
       variant="ghost"
       disabled={pending}
-      onClick={() => startTransition(() => deleteRole(roleId))}
+      onClick={() => startTransition(async () => void notify(await deleteRole(roleId)))}
       className="text-red-700 hover:bg-red-50"
       aria-label={`Eliminar rol ${name}`}
     >

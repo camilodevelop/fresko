@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export type FormState = { ok?: boolean; error?: string };
+export type FormState = { ok?: string; error?: string };
 
 function slugify(value: string) {
   return value
@@ -28,15 +28,15 @@ export async function createRole(_prev: FormState, formData: FormData): Promise<
     return { error: error.code === "23505" ? "Ya existe un rol con ese nombre." : error.message };
   }
   revalidatePath("/admin/roles");
-  return { ok: true };
+  return { ok: `Rol “${name}” creado.` };
 }
 
-export async function setRolePermission(roleId: string, permission: string, enabled: boolean) {
+export async function setRolePermission(roleId: string, permission: string, enabled: boolean): Promise<FormState> {
   await requirePermission("roles.manage");
   const supabase = await createClient();
 
-  const { data: role } = await supabase.from("roles").select("key").eq("id", roleId).single();
-  if (role?.key === "admin") throw new Error("El rol Administrador siempre tiene todos los permisos.");
+  const { data: role } = await supabase.from("roles").select("key, name").eq("id", roleId).single();
+  if (role?.key === "admin") return { error: "El rol Administrador siempre tiene todos los permisos." };
 
   const { error } = enabled
     ? await supabase.from("role_permissions").insert({ role_id: roleId, permission_key: permission })
@@ -45,14 +45,16 @@ export async function setRolePermission(roleId: string, permission: string, enab
         .delete()
         .eq("role_id", roleId)
         .eq("permission_key", permission);
-  if (error && error.code !== "23505") throw new Error(error.message);
+  if (error && error.code !== "23505") return { error: "No se pudo actualizar el permiso." };
   revalidatePath("/admin", "layout");
+  return { ok: `${role?.name ?? "Rol"}: permiso ${enabled ? "activado" : "desactivado"}.` };
 }
 
-export async function deleteRole(roleId: string) {
+export async function deleteRole(roleId: string): Promise<FormState> {
   await requirePermission("roles.manage");
   const supabase = await createClient();
   const { error } = await supabase.from("roles").delete().eq("id", roleId);
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message.includes("sistema") ? "No se puede eliminar un rol del sistema." : "No se pudo eliminar el rol." };
   revalidatePath("/admin/roles");
+  return { ok: "Rol eliminado." };
 }

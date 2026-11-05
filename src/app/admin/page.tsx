@@ -6,6 +6,7 @@ import {
   MapPin,
   Salad,
   Shield,
+  SlidersHorizontal,
   Truck,
   UserRound,
   Users,
@@ -26,6 +27,7 @@ const ICONS: Partial<Record<NavIcon, LucideIcon>> = {
   map: MapPin,
   users: Users,
   shield: Shield,
+  sliders: SlidersHorizontal,
 };
 
 function greeting() {
@@ -40,14 +42,16 @@ export default async function AdminHomePage() {
   const supabase = await createClient();
   const can = (p: string) => session.permissions.has(p);
 
-  const [users, clients, zones, cities] = await Promise.all([
+  const [users, clients, zones, cities, ingredients] = await Promise.all([
     can("users.manage") ? supabase.from("profiles").select("id", { count: "exact", head: true }) : null,
     can("users.manage")
       ? supabase.from("user_roles").select("user_id, roles!inner(key)", { count: "exact", head: true }).eq("roles.key", "cliente")
       : null,
     can("zones.manage") ? supabase.from("zones").select("id", { count: "exact", head: true }).eq("active", true) : null,
     can("zones.manage") ? supabase.from("cities").select("id", { count: "exact", head: true }).eq("active", true) : null,
+    can("inventory.view") ? supabase.from("ingredients").select("stock, min_stock").eq("active", true) : null,
   ]);
+  const lowStock = ingredients?.data?.filter((i) => Number(i.min_stock) > 0 && Number(i.stock) < Number(i.min_stock)).length;
 
 
   const groups = adminNavFor(session.permissions).filter((g) => g.label !== "General" && g.label !== "Cuenta");
@@ -69,7 +73,7 @@ export default async function AdminHomePage() {
         }
       />
 
-      {(users || zones) && (
+      {(users || zones || ingredients) && (
         <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {users && (
             <StatCard icon={UserRound} label="Usuarios registrados" value={users.count ?? 0} hint="Clientes y personal" tone="dark" />
@@ -84,6 +88,17 @@ export default async function AdminHomePage() {
           )}
           {zones && <StatCard icon={MapPin} label="Zonas activas" value={zones.count ?? 0} hint="Con cobertura hoy" tone="fresh" />}
           {cities && <StatCard icon={MapPin} label="Ciudades activas" value={cities.count ?? 0} />}
+          {ingredients && (
+            <Link href="/admin/inventario?filtro=alertas" className="block">
+              <StatCard
+                icon={Boxes}
+                label="Ingredientes bajo el mínimo"
+                value={lowStock ?? 0}
+                hint={lowStock ? "Ver alertas de inventario" : "Inventario en orden"}
+                tone={lowStock ? "default" : "fresh"}
+              />
+            </Link>
+          )}
         </div>
       )}
 

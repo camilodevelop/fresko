@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { first, rules } from "@/lib/validation";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseConfigured } from "@/lib/supabase/env";
 import { safeNext } from "@/lib/safe-next";
@@ -46,21 +49,30 @@ export function LoginForm() {
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const v = useFormValidation(
+    () => ({
+      full_name: mode === "register" ? rules.required(name, "Escribe tu nombre.") : null,
+      email: first(rules.required(email, "Escribe tu correo."), rules.email(email)),
+      password:
+        mode === "register"
+          ? first(rules.required(password, "Crea una contraseña."), rules.minLength(password, 8, "Usa al menos 8 caracteres."))
+          : rules.required(password, "Escribe tu contraseña."),
+    }),
+    () => ({ name, email, password }),
+    "login"
+  );
+
   const switchMode = (value: Mode) => {
     setMode(value);
     setError(null);
     setInfo(null);
+    v.reset();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError(null);
     setInfo(null);
     if (!supabaseConfigured) return;
-    if (mode === "register" && !name.trim()) {
-      setError("Escribe tu nombre.");
-      return;
-    }
     setLoading(true);
     const supabase = createClient();
 
@@ -148,35 +160,50 @@ export function LoginForm() {
         <span className="h-px flex-1 bg-[#1F4D36]/10" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form {...v.formProps(handleSubmit)} className="space-y-4">
         {mode === "register" && (
-          <Input
-            placeholder="Nombre completo"
-            autoComplete="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <Field name={v.idFor("full_name")} error={v.error("full_name")}>
+            <Input
+              {...v.field("full_name")}
+              placeholder="Nombre completo"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Field>
         )}
-        <Input
-          type="email"
-          required
-          placeholder="Correo electrónico"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <Input
-          type="password"
-          required
-          minLength={6}
-          placeholder="Contraseña"
-          autoComplete={mode === "login" ? "current-password" : "new-password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <Field name={v.idFor("email")} error={v.error("email")}>
+          <Input
+            {...v.field("email")}
+            type="email"
+            placeholder="Correo electrónico"
+            autoComplete="email"
+            inputMode="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+        <Field
+          name={v.idFor("password")}
+          error={v.error("password")}
+          hint={mode === "register" ? "Mínimo 8 caracteres." : undefined}
+        >
+          <Input
+            {...v.field("password")}
+            type="password"
+            placeholder="Contraseña"
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </Field>
 
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        {info && <p className="text-sm text-[#1F4D36]">{info}</p>}
+        {error && (
+          <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+        {info && <p className="rounded-2xl bg-[#E8F3DC] px-4 py-3 text-sm text-[#1F4D36]">{info}</p>}
 
         <Button type="submit" className="w-full" disabled={loading}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}

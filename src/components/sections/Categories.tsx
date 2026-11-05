@@ -5,9 +5,10 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { PRODUCT_CATEGORIES } from "@/lib/data/products";
+import type { MenuCategory } from "@/lib/data/products";
 
-export function Categories() {
+export function Categories({ categories }: { categories: MenuCategory[] }) {
+  if (categories.length === 0) return null;
   return (
     <section className="relative z-10 bg-[#F8F7F2] pt-4 pb-16 sm:pt-6 sm:pb-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -15,7 +16,7 @@ export function Categories() {
           <SectionHeading
             eyebrow="Elige tu favorito"
             title="Nuestros productos"
-            description="Dos formas de comer fresco: ensaladas y bowls."
+            description={`${categories.length === 1 ? "Una forma" : categories.length === 2 ? "Dos formas" : "Varias formas"} de comer fresco: ${categories.map((c) => c.name.toLowerCase()).join(", ").replace(/, ([^,]*)$/, " y $1")}.`}
             align="left"
             className="mx-0"
           />
@@ -27,10 +28,10 @@ export function Categories() {
           </Link>
         </div>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2">
-          {PRODUCT_CATEGORIES.map((cat, i) => (
+        <div className={`mt-12 grid gap-6 sm:grid-cols-2 ${categories.length > 2 ? "lg:grid-cols-3" : ""}`}>
+          {categories.map((cat, i) => (
             <motion.article
-              key={cat.id}
+              key={cat.slug}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -56,7 +57,7 @@ export function Categories() {
                     {cat.description}
                   </p>
                   <Link
-                    href={cat.href}
+                    href={`/menu?categoria=${cat.slug}`}
                     className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#1F4D36] group-hover:text-[#8BC34A]"
                   >
                     Ver menú

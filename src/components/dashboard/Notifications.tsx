@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useTra
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Bell, BellOff, CheckCheck, CheckCircle2, Info, OctagonAlert } from "lucide-react";
 import { markAllNotificationsRead, markNotificationRead } from "@/app/actions/notifications";
+import { toast } from "@/lib/notify";
 import { createClient } from "@/lib/supabase/client";
 import type { NotificationItem } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
@@ -47,12 +48,12 @@ export function NotificationsProvider({
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-          (payload) =>
-            setItems((prev) =>
-              prev.some((n) => n.id === payload.new.id)
-                ? prev
-                : [payload.new as NotificationItem, ...prev].slice(0, 20)
-            )
+          (payload) => {
+            const item = payload.new as NotificationItem;
+            setItems((prev) => (prev.some((n) => n.id === item.id) ? prev : [item, ...prev].slice(0, 20)));
+            const show = item.kind === "alert" ? toast.error : item.kind === "warning" ? toast.warning : item.kind === "success" ? toast.success : toast.info;
+            show(item.title, { description: item.body || undefined });
+          }
         )
         .subscribe();
     });
@@ -80,7 +81,10 @@ export function NotificationsProvider({
       },
       readAll: () => {
         setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: now })));
-        startTransition(() => markAllNotificationsRead());
+        startTransition(async () => {
+          await markAllNotificationsRead();
+          toast.success("Notificaciones marcadas como leídas.");
+        });
       },
     };
   }, [items, router, profileHref]);

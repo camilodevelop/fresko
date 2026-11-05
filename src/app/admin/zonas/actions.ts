@@ -1,12 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { LatLng } from "@/lib/data/coverage";
 
-export type FormState = { ok?: boolean; error?: string };
+export type FormState = { ok?: string; error?: string };
 
 function refresh() {
   revalidatePath("/admin/zonas", "layout");
@@ -26,7 +25,7 @@ export async function createCountry(_prev: FormState, formData: FormData): Promi
   const { error } = await supabase.from("countries").insert({ code, name, currency });
   if (error) return { error: error.code === "23505" ? "Ese país ya existe." : error.message };
   refresh();
-  return { ok: true };
+  return { ok: `País “${name}” agregado.` };
 }
 
 export async function createCity(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -45,16 +44,22 @@ export async function createCity(_prev: FormState, formData: FormData): Promise<
   const { error } = await supabase.from("cities").insert({ country_id: countryId, name, timezone });
   if (error) return { error: error.code === "23505" ? "Esa ciudad ya existe en el país." : error.message };
   refresh();
-  return { ok: true };
+  return { ok: `Ciudad “${name}” agregada.` };
 }
 
-export async function setActive(table: "countries" | "cities" | "zones", id: string, active: boolean) {
+export async function setActive(table: "countries" | "cities" | "zones", id: string, active: boolean): Promise<FormState> {
   await requirePermission("zones.manage");
-  if (!["countries", "cities", "zones"].includes(table)) throw new Error("Tabla inválida");
+  if (!["countries", "cities", "zones"].includes(table)) return { error: "Tabla inválida." };
   const supabase = await createClient();
   const { error } = await supabase.from(table).update({ active }).eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) return { error: "No se pudo cambiar el estado." };
   refresh();
+  const labels = {
+    countries: ["País activado.", "País desactivado."],
+    cities: ["Ciudad activada.", "Ciudad desactivada."],
+    zones: ["Zona activada.", "Zona desactivada."],
+  } as const;
+  return { ok: labels[table][active ? 0 : 1] };
 }
 
 export type ZoneInput = {
@@ -127,5 +132,5 @@ export async function saveZone(input: ZoneInput): Promise<FormState> {
   }
 
   refresh();
-  redirect("/admin/zonas");
+  return { ok: input.id ? `Zona “${name}” actualizada.` : `Zona “${name}” creada.` };
 }

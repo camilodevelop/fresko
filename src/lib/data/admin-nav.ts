@@ -20,13 +20,14 @@ const ADMIN_GROUPS: { label: string; items: AdminItem[] }[] = [
   {
     label: "Productos",
     items: [
-      { href: "/admin/catalogo", label: "Catálogo", icon: "salad", permission: "catalog.manage", soon: true, description: "Productos, recetas e ingredientes." },
-      { href: "/admin/inventario", label: "Inventario", icon: "boxes", permission: "inventory.view", soon: true, description: "Stock, alertas y pérdidas." },
+      { href: "/admin/catalogo", label: "Catálogo", icon: "salad", permission: "catalog.manage", description: "Productos, recetas e ingredientes." },
+      { href: "/admin/inventario", label: "Inventario", icon: "boxes", permission: "inventory.view", description: "Stock, alertas y pérdidas." },
     ],
   },
   {
     label: "Configuración",
     items: [
+      { href: "/admin/ajustes-venta", label: "Ajustes de venta", icon: "sliders", permission: "catalog.manage", description: "Planes y descuentos, armador y precios sugeridos." },
       { href: "/admin/zonas", label: "Cobertura", icon: "map", permission: "zones.manage", description: "Países, ciudades, zonas y franjas." },
       { href: "/admin/usuarios", label: "Usuarios", icon: "users", permission: "users.manage", description: "Asigna roles a cada persona." },
       { href: "/admin/roles", label: "Roles y permisos", icon: "shield", permission: "roles.manage", description: "Qué puede hacer cada rol." },
