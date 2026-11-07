@@ -2,11 +2,12 @@ import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import QRCode from "qrcode";
 
-/** Etiqueta de la bolsa de un pedido. */
+/**
+ * Etiqueta de la bolsa de un pedido. No lleva número de parada ni domiciliario: la ruta puede
+ * reordenarse (pedidos nuevos, cambio de domiciliario) y el sistema muestra siempre el orden vigente.
+ */
 export type BagLabel = {
   code: string;
-  stop: number | null;
-  courier: string | null;
   zone: string;
   dateLabel: string;
   slotLabel: string;
@@ -81,17 +82,12 @@ export async function buildBagLabelsPdf(labels: BagLabel[], size = "102x152") {
     const hr = (y: number) => page.drawLine({ start: { x: m, y }, end: { x: W - m, y }, thickness: 0.8, color: LINE });
     let y = H - m;
 
-    // Encabezado: consecutivo y parada
-    const stopBox = 22 * MM;
-    page.drawRectangle({ x: W - m - stopBox, y: y - stopBox, width: stopBox, height: stopBox, color: INK });
-    const stopText = l.stop ? String(l.stop) : "-";
-    page.drawText("PARADA", { x: W - m - stopBox + (stopBox - bold.widthOfTextAtSize("PARADA", 7)) / 2, y: y - 9, size: 7, font: bold, color: rgb(1, 1, 1) });
-    page.drawText(stopText, { x: W - m - stopBox + (stopBox - bold.widthOfTextAtSize(stopText, 30)) / 2, y: y - stopBox + 12, size: 30, font: bold, color: rgb(1, 1, 1) });
+    // Encabezado: el consecutivo es lo que se busca en la canasta (sin parada ni domiciliario).
     draw("FRESKO", m, y - 9, 8, bold, MUTED);
-    draw(l.code, m, y - 34, 26, bold);
-    draw(`${l.dateLabel} · ${l.slotLabel}`, m, y - 48, 9, regular, MUTED);
-    y -= stopBox + 8;
-    draw([l.zone, l.courier ? `Domiciliario: ${l.courier}` : ""].filter(Boolean).join(" · "), m, y, 8.5, regular, MUTED);
+    draw(l.code, m, y - 42, 36, bold);
+    draw(`${l.dateLabel} · ${l.slotLabel}`, m, y - 58, 10, regular, MUTED);
+    y -= 66;
+    draw(l.zone, m, y, 8.5, regular, MUTED);
     y -= 8;
     hr(y);
 

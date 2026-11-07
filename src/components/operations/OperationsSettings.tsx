@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Bike, ChefHat, Clock, MapPin, Pencil, Plus, X } from "lucide-react";
-import { saveKitchen, setCourierAssignment, setDeliveryWait, setZoneKitchen, type KitchenInput } from "@/app/actions/operations";
+import { saveKitchen, setBasketMax, setCourierAssignment, setDeliveryWait, setZoneKitchen, type KitchenInput } from "@/app/actions/operations";
 import { Panel, StatusBadge } from "@/components/dashboard/ui";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -31,12 +31,14 @@ export function OperationsSettings({
   coverage,
   couriers,
   waitMinutes,
+  basketMax,
 }: {
   kitchens: KitchenRow[];
   zones: OpsZone[];
   coverage: CoverageZone[];
   couriers: OpsCourier[];
   waitMinutes: number;
+  basketMax: number;
 }) {
   const router = useRouter();
   const [form, setForm] = useState<KitchenInput | null>(null);
@@ -52,7 +54,7 @@ export function OperationsSettings({
 
   return (
     <div className="space-y-6">
-      <DeliveryWait initial={waitMinutes} />
+      <DeliveryRules wait={waitMinutes} max={basketMax} />
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Panel
           title="Cocinas"
@@ -217,37 +219,70 @@ function ToggleChip({ on, disabled, onClick, children }: { on: boolean; disabled
   );
 }
 
-/** Minutos que el domiciliario espera al cliente; también es el tiempo por parada al armar canastas. */
-function DeliveryWait({ initial }: { initial: number }) {
+/** Ajustes de reparto: minutos de espera por entrega y pedidos máximos por canasta. */
+function DeliveryRules({ wait, max }: { wait: number; max: number }) {
+  return (
+    <Panel title="Reparto" icon={Clock} description="Con estos valores se arman las canastas de cada franja y se controla la espera en cada entrega.">
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <NumberSetting
+          label="Minutos de espera en la entrega"
+          hint="Al llegar, el domiciliario avisa y espera este tiempo antes de poder reportar que el cliente no salió. También es el tiempo por parada al calcular canastas. Entre 1 y 30."
+          initial={wait}
+          min={1}
+          max={30}
+          save={setDeliveryWait}
+        />
+        <NumberSetting
+          label="Pedidos máximos por canasta"
+          hint="Cada canasta se llena con su ruta óptima hasta este número (o hasta donde alcance la franja) y se abre otra. Los pedidos nuevos no entran a canastas llenas. Entre 1 y 50."
+          initial={max}
+          min={1}
+          max={50}
+          save={setBasketMax}
+        />
+      </div>
+    </Panel>
+  );
+}
+
+function NumberSetting({
+  label,
+  hint,
+  initial,
+  min,
+  max,
+  save,
+}: {
+  label: string;
+  hint: string;
+  initial: number;
+  min: number;
+  max: number;
+  save: (n: number) => Promise<{ ok?: string; error?: string }>;
+}) {
   const router = useRouter();
   const [value, setValue] = useState(String(initial));
   const [pending, start] = useTransition();
   const n = Number(value);
-  const valid = Number.isInteger(n) && n >= 1 && n <= 30;
+  const valid = Number.isInteger(n) && n >= min && n <= max;
   return (
-    <Panel
-      title="Espera en la entrega"
-      icon={Clock}
-      description="Al llegar, el domiciliario avisa al cliente y espera este tiempo; después puede reportar que no se pudo entregar. Las canastas se calculan con este tiempo por parada."
+    <form
+      className="flex items-end gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!valid) return;
+        start(async () => {
+          notify(await save(n));
+          router.refresh();
+        });
+      }}
     >
-      <form
-        className="mt-3 flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!valid) return;
-          start(async () => {
-            notify(await setDeliveryWait(n));
-            router.refresh();
-          });
-        }}
-      >
-        <Field label="Minutos de espera" hint="Entre 1 y 30." error={valid ? undefined : "Escribe un número entre 1 y 30."}>
-          <Input type="number" min={1} max={30} step={1} value={value} onChange={(e) => setValue(e.target.value)} className="w-32" />
-        </Field>
-        <Button type="submit" disabled={pending || !valid || n === initial}>
-          {pending ? "Guardando…" : "Guardar"}
-        </Button>
-      </form>
-    </Panel>
+      <Field label={label} hint={hint} error={valid ? undefined : `Escribe un número entre ${min} y ${max}.`} className="flex-1">
+        <Input type="number" min={min} max={max} step={1} value={value} onChange={(e) => setValue(e.target.value)} className="w-32" />
+      </Field>
+      <Button type="submit" disabled={pending || !valid || n === initial}>
+        {pending ? "Guardando…" : "Guardar"}
+      </Button>
+    </form>
   );
 }

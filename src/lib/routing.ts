@@ -154,6 +154,8 @@ export const SERVICE_SECONDS = 5 * 60;
 // Tiempo por parada del cálculo en curso. Todos los cálculos leen el mismo ajuste de la base,
 // así que dos cálculos simultáneos usan el mismo valor.
 let service = SERVICE_SECONDS;
+// Pedidos máximos por canasta del cálculo en curso (Configuración → Operación).
+let cap = Infinity;
 
 export type MinimalPlan = {
   routes: PlannedRoute[];
@@ -186,7 +188,8 @@ export function splitTour(depot: LatLng, tour: Stop[], windowSeconds: number, fa
     for (let j = i; j < n; j++) {
       if (j > i) t += service + leg(tour[j - 1], tour[j]);
       // Un pedido solo siempre forma canasta, aunque no alcance a llegar a tiempo.
-      if (t > windowSeconds && j > i) break;
+      // Corta por tiempo (un pedido solo siempre cabe) o al llenar la canasta.
+      if ((t > windowSeconds && j > i) || j - i + 1 > cap) break;
       const cand = { routes: best[i].routes + 1, time: best[i].time + t, from: i };
       const cur = best[j + 1];
       if (cand.routes < cur.routes || (cand.routes === cur.routes && cand.time < cur.time)) best[j + 1] = cand;
@@ -263,7 +266,7 @@ function eliminateRoutes(depot: LatLng, groups: Stop[][], windowSeconds: number,
       for (const stop of victim) {
         let best: { gi: number; pos: number; cost: number } | null = null;
         trial.forEach((g, gi) => {
-          if (gi === i) return;
+          if (gi === i || g.length >= cap) return;
           const base = finishEst(depot, g, factor);
           for (let pos = 0; pos <= g.length; pos++) {
             const cand = [...g.slice(0, pos), stop, ...g.slice(pos)];
@@ -310,9 +313,12 @@ export async function planMinimalRoutes(
   /** Factor aprendido en cálculos anteriores (tiempos reales de Google / estimación propia). */
   learnedFactor = 1,
   /** Segundos por parada (minutos de espera configurados). */
-  serviceSeconds = SERVICE_SECONDS
+  serviceSeconds = SERVICE_SECONDS,
+  /** Pedidos máximos por canasta. */
+  maxStops = Infinity
 ): Promise<MinimalPlan> {
   service = serviceSeconds;
+  cap = Math.max(1, maxStops);
   if (stops.length === 0) return { routes: [], finishSeconds: [], calibration: learnedFactor, measured: null };
   const tour = orderLocally(depot, stops);
   const byId = new Map(stops.map((x) => [x.id, x]));
@@ -382,6 +388,7 @@ export async function planMinimalRoutes(
       for (const st of victim.stops.map((x) => byId.get(x.id)!)) {
         let best: { o: (typeof others)[number]; pos: number; cost: number } | null = null;
         for (const o of others) {
+          if (o.stops.length >= cap) continue;
           const base = finishEst(depot, o.stops, factor);
           for (let pos = 0; pos <= o.stops.length; pos++) {
             const cost = finishEst(depot, [...o.stops.slice(0, pos), st, ...o.stops.slice(pos)], factor) - base;

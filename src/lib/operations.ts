@@ -315,8 +315,12 @@ export type RouteView = {
   returnedAt: string | null;
   /** Alguien empezó a alistar la canasta: queda fija (recalcular no la toca). */
   packingStarted: boolean;
-  /** Pedidos de la canasta que cocina aún no termina (no se puede alistar). */
+  /** Pedidos de la canasta que cocina aún no termina. */
   kitchenPending: number;
+  /** Pedidos de toda la franja (en canastas por salir) que cocina aún no termina, sin contar los que tienen novedad: mientras haya, no se alista. */
+  slotKitchenPending: number;
+  /** Pedidos de esta canasta sin preparar y sin novedad de cocina (los que bloquean). */
+  kitchenBlocking: number;
   /** Hora estimada de la última entrega. */
   lastEta: string | null;
   /** Fin de la franja (ISO). */
@@ -398,6 +402,10 @@ function toRouteView(r: RouteRow): RouteView {
     lastEta: r.route_stops.reduce<string | null>((m, s) => (s.eta && (!m || s.eta > m) ? s.eta : m), null),
     slotEnd: r.delivery_slots ? new Date(`${r.delivery_date}T${r.delivery_slots.end_time.slice(0, 8)}-05:00`).toISOString() : null,
     kitchenPending: r.route_stops.filter((s) => s.orders && !s.orders.prepared_at && s.orders.status !== "cancelado").length,
+    slotKitchenPending: 0,
+    kitchenBlocking: r.route_stops.filter(
+      (s) => s.orders && !s.orders.prepared_at && s.orders.status !== "cancelado" && !s.orders.order_incidents.some((n) => n.stage === "cocina" && !n.resolution)
+    ).length,
     kitchen: r.kitchens,
     stops: r.route_stops
       .filter((s) => s.orders)
@@ -447,7 +455,11 @@ function toRouteView(r: RouteRow): RouteView {
 export async function loadRoutes(kitchenId: string, date: string): Promise<RouteView[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("delivery_routes").select(ROUTE_SELECT).eq("kitchen_id", kitchenId).eq("delivery_date", date).order("created_at");
-  return ((data ?? []) as unknown as RouteRow[]).map(toRouteView);
+  const routes = ((data ?? []) as unknown as RouteRow[]).map(toRouteView);
+  // Las canastas se alistan por franja: cuántos pedidos le faltan a cocina en toda la franja.
+  const pendingBySlot = new Map<string, number>();
+  for (const r of routes) if (r.status === "planificada") pendingBySlot.set(r.slotId, (pendingBySlot.get(r.slotId) ?? 0) + r.kitchenBlocking);
+  return routes.map((r) => ({ ...r, slotKitchenPending: pendingBySlot.get(r.slotId) ?? 0 }));
 }
 
 export async function loadMyRoutes(userId: string, date: string): Promise<RouteView[]> {
@@ -462,7 +474,7 @@ export async function countUnrouted(kitchenId: string, date: string) {
   const [{ data: orders }, { data: stops }] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, slot_id, zones!inner(kitchen_id)")
+      .select("id, slot_id, zones!inner(kitchen_id), order_incidents(stage, resolution)")
       .eq("zones.kitchen_id", kitchenId)
       .eq("delivery_date", date)
       .eq("on_hold", false)
@@ -471,7 +483,9 @@ export async function countUnrouted(kitchenId: string, date: string) {
   ]);
   const routed = new Set((stops ?? []).flatMap((r) => r.route_stops.map((s) => s.order_id)));
   const bySlot: Record<string, number> = {};
-  for (const o of orders ?? []) if (!routed.has(o.id)) bySlot[o.slot_id] = (bySlot[o.slot_id] ?? 0) + 1;
+  // Sin canasta y sin novedad de cocina abierta (esos no van en canastas hasta prepararse).
+  for (const o of orders ?? [])
+    if (!routed.has(o.id) && !o.order_incidents.some((n) => n.stage === "cocina" && !n.resolution)) bySlot[o.slot_id] = (bySlot[o.slot_id] ?? 0) + 1;
   return bySlot;
 }
 
@@ -481,6 +495,7 @@ export type IncidentView = {
   code: string;
   customer: string;
   slotLabel: string;
+  slotId: string;
   stage: "cocina" | "alistamiento" | "entrega";
   kitchenName: string | null;
   itemName: string | null;
@@ -504,7 +519,7 @@ export async function loadIncidents(kitchenId: string | null, date: string): Pro
   let query = supabase
     .from("order_incidents")
     .select(
-      "id, stage, item_name, quantity, reason, note, resolution, photo_path, created_at, created_by, delivery_routes(profiles!delivery_routes_courier_id_fkey(full_name)), orders!inner(id, code, status, contact_name, slot_label, delivery_date, zones!inner(kitchen_id, kitchens(name)))"
+      "id, stage, item_name, quantity, reason, note, resolution, photo_path, created_at, created_by, delivery_routes(profiles!delivery_routes_courier_id_fkey(full_name)), orders!inner(id, code, status, contact_name, slot_id, slot_label, delivery_date, zones!inner(kitchen_id, kitchens(name)))"
     )
     .eq("orders.delivery_date", date)
     .order("created_at", { ascending: false });
@@ -522,7 +537,7 @@ export async function loadIncidents(kitchenId: string | null, date: string): Pro
     resolution: string | null;
     created_at: string;
     created_by: string | null;
-    orders: { id: string; code: string; status: string; contact_name: string; slot_label: string; zones: { kitchens: { name: string } | null } | null };
+    orders: { id: string; code: string; status: string; contact_name: string; slot_id: string; slot_label: string; zones: { kitchens: { name: string } | null } | null };
   }[];
   const authors = [...new Set(rows.map((r) => r.created_by).filter((x): x is string => Boolean(x)))];
   const { data: people } = authors.length ? await supabase.from("profiles").select("id, full_name").in("id", authors) : { data: [] };
@@ -536,6 +551,7 @@ export async function loadIncidents(kitchenId: string | null, date: string): Pro
     code: r.orders.code,
     customer: r.orders.contact_name,
     slotLabel: r.orders.slot_label,
+    slotId: r.orders.slot_id,
     kitchenName: r.orders.zones?.kitchens?.name ?? null,
     stage: r.stage,
     itemName: r.item_name,
@@ -563,7 +579,7 @@ export type LateOption = {
   extraMeters: number;
   extraSeconds: number;
   eta: string | null;
-  /** Número de parada que llevará su etiqueta. */
+  /** Parada que tendrá en el orden de entrega (las siguientes se corren una). */
   labelPosition: number;
   /** Dónde va la bolsa en la canasta (la última entrega va al fondo). */
   placement: string;
@@ -579,6 +595,9 @@ export type LateSlot = {
   /** Domiciliarios de la franja que aún no tienen canasta alistada: los pedidos nuevos van con ellos. */
   freeCouriers: string[];
   orders: LateOrder[];
+  /** Canastas alistadas que ya tienen el máximo de pedidos. */
+  fullBaskets: number;
+  maxPerBasket: number;
 };
 
 // Misma estimación que el cálculo de canastas: calles ≈ 1,35 × línea recta, 22 km/h × la velocidad aprendida de Google.
@@ -594,26 +613,28 @@ export async function loadLateOrders(kitchenId: string, date: string): Promise<R
     supabase.from("kitchens").select("lat, lng").eq("id", kitchenId).single(),
     supabase
       .from("orders")
-      .select("id, code, slot_id, zone_id, prepared_at, address_snapshot, route_stops(route_id), zones!inner(kitchen_id)")
+      .select("id, code, slot_id, zone_id, prepared_at, address_snapshot, route_stops(route_id), order_incidents(stage, resolution), zones!inner(kitchen_id)")
       .eq("zones.kitchen_id", kitchenId)
       .eq("delivery_date", date)
       .eq("on_hold", false)
       .in("status", ["confirmado", "en_preparacion"]),
     supabase
       .from("delivery_routes")
-      .select("id, slot_id, courier_id, status, packing_started_at, returned_at, profiles!delivery_routes_courier_id_fkey(full_name, email), route_stops(position, seq, eta, orders(code, address_snapshot))")
+      .select("id, slot_id, courier_id, status, packing_started_at, returned_at, profiles!delivery_routes_courier_id_fkey(full_name, email), route_stops(position, seq, eta, orders(code, address_snapshot, packed_at))")
       .eq("kitchen_id", kitchenId)
       .eq("delivery_date", date),
-    supabase.from("settings").select("key, value").in("key", ["routing_speed_factor", "delivery_wait_minutes"]),
+    supabase.from("settings").select("key, value").in("key", ["routing_speed_factor", "delivery_wait_minutes", "basket_max_orders"]),
     supabase.from("delivery_slots").select("id, end_time"),
   ]);
   if (!kitchen) return {};
   const setting = (k: string) => Number(learned?.find((x) => x.key === k)?.value);
   const factor = setting("routing_speed_factor") > 0 ? setting("routing_speed_factor") : 1.6;
   const SERVICE = (setting("delivery_wait_minutes") > 0 ? setting("delivery_wait_minutes") : 5) * 60;
+  const CAP = setting("basket_max_orders") > 0 ? setting("basket_max_orders") : 12;
   const roadSeconds = (m: number) => (m / (22 / 3.6)) * factor;
   const endOf = new Map((slotRows ?? []).map((x) => [x.id, new Date(`${date}T${x.end_time.slice(0, 8)}-05:00`).getTime() - SAFETY_SECONDS * 1000]));
-  const late = (orders ?? []).filter((o) => o.route_stops.length === 0);
+  // Pedidos nuevos sin canasta (los que tienen novedad de cocina abierta no se pueden agregar).
+  const late = (orders ?? []).filter((o) => o.route_stops.length === 0 && !o.order_incidents.some((n) => n.stage === "cocina" && !n.resolution));
   if (late.length === 0) return {};
 
   type RouteRow = {
@@ -624,7 +645,7 @@ export async function loadLateOrders(kitchenId: string, date: string): Promise<R
     packing_started_at: string | null;
     returned_at: string | null;
     profiles: { full_name: string; email: string } | null;
-    route_stops: { position: number; seq: number; eta: string | null; orders: { code: string; address_snapshot: { lat?: number; lng?: number } } | null }[];
+    route_stops: { position: number; seq: number; eta: string | null; orders: { code: string; packed_at: string | null; address_snapshot: { lat?: number; lng?: number } } | null }[];
   };
   const allRoutes = (routes ?? []) as unknown as RouteRow[];
   const zoneOf = new Map(late.map((o) => [o.slot_id, o.zone_id]));
@@ -646,8 +667,10 @@ export async function loadLateOrders(kitchenId: string, date: string): Promise<R
       if (!fixed.has(a.user_id)) free.set(a.user_id, a.profiles?.full_name || a.profiles?.email || "Domiciliario");
     }
 
-    // Canastas alistadas que aún no salen: candidatas para intercalar.
-    const candidates = slotRoutes.filter((r) => r.status === "planificada" && r.packing_started_at);
+    // Canastas que ya se están alistando, con cupo y que aún no están listas para salir (todo empacado).
+    const readyToLeave = (r: (typeof slotRoutes)[number]) => r.route_stops.length > 0 && r.route_stops.every((s) => s.orders?.packed_at);
+    const candidates = slotRoutes.filter((r) => r.status === "planificada" && r.packing_started_at && r.route_stops.length < CAP && !readyToLeave(r));
+    const full = slotRoutes.filter((r) => r.status === "planificada" && r.packing_started_at && (r.route_stops.length >= CAP || readyToLeave(r))).length;
     const slotOrders = late.filter((o) => o.slot_id === slotId).map((o) => {
       const a = o.address_snapshot as { lat?: number; lng?: number };
       const point = { lat: Number(a.lat), lng: Number(a.lng) };
@@ -680,7 +703,7 @@ export async function loadLateOrders(kitchenId: string, date: string): Promise<R
               eta,
               feasible: finish === null || finish <= (endOf.get(slotId) ?? Infinity),
               finishEta: finish ? new Date(finish).toISOString() : null,
-              labelPosition: Math.max(0, ...stops.map((s) => s.position)) + 1,
+              labelPosition: i + 1,
               placement: !prev
                 ? "Encima de todo (se entrega de primero)"
                 : !next
@@ -695,7 +718,7 @@ export async function loadLateOrders(kitchenId: string, date: string): Promise<R
       }
       return { orderId: o.id, code: o.code, prepared: Boolean(o.prepared_at), options: options.slice(0, 3) };
     });
-    result[slotId] = { freeCouriers: [...free.values()], orders: slotOrders };
+    result[slotId] = { freeCouriers: [...free.values()], orders: slotOrders, fullBaskets: full, maxPerBasket: CAP };
   }
   return result;
 }
@@ -722,6 +745,33 @@ export async function loadSlotCouriers(kitchenId: string): Promise<Record<string
       if (a.zone_id === sl.zone_id && (!a.slot_id || a.slot_id === sl.id)) list.set(a.user_id, a.profiles?.full_name || a.profiles?.email || "Domiciliario");
     }
     out[sl.id] = [...list].map(([id, name]) => ({ id, name })).sort((x, y) => x.name.localeCompare(y.name));
+  }
+  return out;
+}
+
+export type SlotKitchenState = {
+  /** Pedidos sin preparar y sin novedad: bloquean calcular y alistar. */
+  blocking: number;
+  /** Pedidos con novedad de cocina abierta: no bloquean y no entran a canastas hasta prepararse. */
+  withIncident: number;
+};
+
+/** Por franja: pedidos que cocina aún no termina, separando los que tienen novedad registrada. */
+export async function countSlotUnprepared(kitchenId: string, date: string): Promise<Record<string, SlotKitchenState>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("orders")
+    .select("id, slot_id, zones!inner(kitchen_id), order_incidents(stage, resolution)")
+    .eq("zones.kitchen_id", kitchenId)
+    .eq("delivery_date", date)
+    .eq("on_hold", false)
+    .is("prepared_at", null)
+    .in("status", ["confirmado", "en_preparacion"]);
+  const out: Record<string, SlotKitchenState> = {};
+  for (const o of (data ?? []) as unknown as { slot_id: string; order_incidents: { stage: string; resolution: string | null }[] }[]) {
+    const st = (out[o.slot_id] ??= { blocking: 0, withIncident: 0 });
+    if (o.order_incidents.some((n) => n.stage === "cocina" && !n.resolution)) st.withIncident++;
+    else st.blocking++;
   }
   return out;
 }

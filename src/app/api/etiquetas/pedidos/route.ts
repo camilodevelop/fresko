@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     supabase
       .from("orders")
       .select(
-        "id, code, delivery_date, slot_label, contact_name, contact_phone, address_snapshot, notes, zones(name), order_items(name, quantity, options, products(allergens)), route_stops(position, delivery_routes(profiles!delivery_routes_courier_id_fkey(full_name)))"
+        "id, code, delivery_date, slot_label, contact_name, contact_phone, address_snapshot, notes, zones(name), order_items(name, quantity, options, products(allergens))"
       )
       .in("id", ids),
     supabase.from("settings").select("value").eq("key", "label_size").maybeSingle(),
@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
     notes: string;
     zones: { name: string } | null;
     order_items: { name: string; quantity: number; options: { id: string; name: string }[]; products: { allergens: string[] } | null }[];
-    route_stops: { position: number; delivery_routes: { profiles: { full_name: string } | null } | null }[];
   };
   const rows = (orders ?? []) as unknown as Row[];
   const optionIds = [...new Set(rows.flatMap((o) => o.order_items.flatMap((i) => (Array.isArray(i.options) ? i.options.map((x) => x.id) : []))))];
@@ -78,8 +77,6 @@ export async function GET(request: NextRequest) {
       }
       return {
         code: o.code,
-        stop: o.route_stops[0]?.position ?? null,
-        courier: o.route_stops[0]?.delivery_routes?.profiles?.full_name ?? null,
         zone: o.zones?.name ?? "",
         dateLabel: formatDeliveryDate(o.delivery_date, { weekday: "short", day: "numeric", month: "short" }, true),
         slotLabel: o.slot_label,

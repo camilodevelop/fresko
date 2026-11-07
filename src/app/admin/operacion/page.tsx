@@ -15,7 +15,8 @@ export default async function OperacionPage() {
     supabase.from("roles").select("id").eq("key", "domiciliario").maybeSingle(),
     supabase.from("courier_assignments").select("user_id, zone_id, slot_id").eq("active", true),
   ]);
-  const { data: wait } = await supabase.from("settings").select("value").eq("key", "delivery_wait_minutes").maybeSingle();
+  const { data: cfg } = await supabase.from("settings").select("key, value").in("key", ["delivery_wait_minutes", "basket_max_orders"]);
+  const num = (k: string, def: number) => (Number(cfg?.find((x) => x.key === k)?.value) > 0 ? Number(cfg?.find((x) => x.key === k)?.value) : def);
   const { data: people } = role
     ? await supabase.from("user_roles").select("profiles(id, full_name, email)").eq("role_id", role.id)
     : { data: [] as { profiles: { id: string; full_name: string; email: string } | null }[] };
@@ -28,7 +29,8 @@ export default async function OperacionPage() {
         description="Cocinas y domiciliarios. Con esto se arman la producción de cada cocina y las rutas de cada franja."
       />
       <OperationsSettings
-        waitMinutes={Number(wait?.value) > 0 ? Number(wait?.value) : 5}
+        waitMinutes={num("delivery_wait_minutes", 5)}
+        basketMax={num("basket_max_orders", 12)}
         kitchens={kitchens}
         coverage={coverage}
         zones={(zones ?? []).map((z) => ({

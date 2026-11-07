@@ -947,6 +947,9 @@ isOneToOne: false
               "email_confirmed_at": string,"last_sign_in_at": string,"providers": (string)[]
             }[]
                            },
+"basket_max_orders":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "can_pack_route":
 { Args: { "p_route_id": string }; Returns: boolean
                            },
@@ -1143,6 +1146,9 @@ isOneToOne: false
 { Args: { "p_delivery": Json,"p_pay"?: boolean,"p_subscription_id": string }; Returns: {
               "charged": number,"order_code": string,"order_id": string
             }[]
+                           },
+"set_basket_max_orders":
+{ Args: { "p_max": number }; Returns: undefined
                            },
 "set_delivery_wait_minutes":
 { Args: { "p_minutes": number }; Returns: undefined

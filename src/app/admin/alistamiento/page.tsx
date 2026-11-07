@@ -2,7 +2,7 @@ import { Truck } from "lucide-react";
 import { EmptyState, PageHeader } from "@/components/dashboard/ui";
 import { DayPicker } from "@/components/operations/DayPicker";
 import { PackingBoard } from "@/components/operations/PackingBoard";
-import { countUnrouted, loadIncidents, loadKitchenSlots, loadKitchens, loadLateOrders, loadRoutes, loadSlotCouriers } from "@/lib/operations";
+import { countSlotUnprepared, countUnrouted, loadIncidents, loadKitchenSlots, loadKitchens, loadLateOrders, loadRoutes, loadSlotCouriers } from "@/lib/operations";
 import { requirePermission } from "@/lib/supabase/auth";
 import { todayBogota } from "@/lib/subscriptions";
 
@@ -32,6 +32,7 @@ export default async function AlistamientoPage({ searchParams }: { searchParams:
             slots={await loadKitchenSlots(kitchen.id)}
             routes={await loadRoutes(kitchen.id, date)}
             unrouted={await countUnrouted(kitchen.id, date)}
+            unprepared={await countSlotUnprepared(kitchen.id, date)}
             late={await loadLateOrders(kitchen.id, date)}
             couriers={await loadSlotCouriers(kitchen.id)}
             incidents={await loadIncidents(kitchen.id, date)}
