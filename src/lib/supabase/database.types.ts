@@ -193,6 +193,58 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"employee_pay": {
+                  Row: {
+                    "active": boolean,"amount": number,"kitchen_id": string | null,"pay_type": string,"starts_on": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active"?: boolean,"amount": number,"kitchen_id"?: string | null,"pay_type": string,"starts_on"?: string,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "active"?: boolean,"amount"?: number,"kitchen_id"?: string | null,"pay_type"?: string,"starts_on"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "employee_pay_kitchen_id_fkey"
+      columns: ["kitchen_id"]
+isOneToOne: false
+      referencedRelation: "kitchens"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "employee_pay_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"finance_entries": {
+                  Row: {
+                    "amount": number,"category": string,"created_at": string,"created_by": string | null,"description": string,"ends_on": string | null,"entry_date": string,"id": string,"kind": string,"kitchen_id": string | null,"recurring": boolean,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount": number,"category": string,"created_at"?: string,"created_by"?: string | null,"description": string,"ends_on"?: string | null,"entry_date": string,"id"?: string,"kind": string,"kitchen_id"?: string | null,"recurring"?: boolean,"updated_at"?: string
+                  }
+                  Update: {
+                    "amount"?: number,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string,"ends_on"?: string | null,"entry_date"?: string,"id"?: string,"kind"?: string,"kitchen_id"?: string | null,"recurring"?: boolean,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "finance_entries_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "finance_entries_kitchen_id_fkey"
+      columns: ["kitchen_id"]
+isOneToOne: false
+      referencedRelation: "kitchens"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"ingredient_categories": {
                   Row: {
                     "active": boolean,"created_at": string,"id": string,"name": string,"slug": string,"sort": number
@@ -229,17 +281,29 @@ isOneToOne: false
                   ]
                 },"inventory_movements": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"ingredient_id": string,"kind": string,"note": string,"quantity": number,"reason": string | null,"unit_cost": number | null
+                    "batch_id": string | null,"counterpart_kitchen_id": string | null,"created_at": string,"created_by": string | null,"id": string,"ingredient_id": string,"kind": string,"kitchen_id": string,"note": string,"quantity": number,"reason": string | null,"transfer_id": string | null,"unit_cost": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"ingredient_id": string,"kind": string,"note"?: string,"quantity": number,"reason"?: string | null,"unit_cost"?: number | null
+                    "batch_id"?: string | null,"counterpart_kitchen_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"ingredient_id": string,"kind": string,"kitchen_id": string,"note"?: string,"quantity": number,"reason"?: string | null,"transfer_id"?: string | null,"unit_cost"?: number | null
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"ingredient_id"?: string,"kind"?: string,"note"?: string,"quantity"?: number,"reason"?: string | null,"unit_cost"?: number | null
+                    "batch_id"?: string | null,"counterpart_kitchen_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"ingredient_id"?: string,"kind"?: string,"kitchen_id"?: string,"note"?: string,"quantity"?: number,"reason"?: string | null,"transfer_id"?: string | null,"unit_cost"?: number | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "inventory_movements_batch_id_fkey"
+      columns: ["batch_id"]
+isOneToOne: false
+      referencedRelation: "prep_batches"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "inventory_movements_counterpart_kitchen_id_fkey"
+      columns: ["counterpart_kitchen_id"]
+isOneToOne: false
+      referencedRelation: "kitchens"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "inventory_movements_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -250,6 +314,38 @@ isOneToOne: false
       columns: ["ingredient_id"]
 isOneToOne: false
       referencedRelation: "ingredients"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "inventory_movements_kitchen_id_fkey"
+      columns: ["kitchen_id"]
+isOneToOne: false
+      referencedRelation: "kitchens"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"kitchen_stock": {
+                  Row: {
+                    "cost_per_unit": number,"ingredient_id": string,"kitchen_id": string,"min_stock": number,"stock": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cost_per_unit"?: number,"ingredient_id": string,"kitchen_id": string,"min_stock"?: number,"stock"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "cost_per_unit"?: number,"ingredient_id"?: string,"kitchen_id"?: string,"min_stock"?: number,"stock"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "kitchen_stock_ingredient_id_fkey"
+      columns: ["ingredient_id"]
+isOneToOne: false
+      referencedRelation: "ingredients"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "kitchen_stock_kitchen_id_fkey"
+      columns: ["kitchen_id"]
+isOneToOne: false
+      referencedRelation: "kitchens"
       referencedColumns: ["id"]
     }
                   ]
@@ -315,14 +411,14 @@ isOneToOne: false
                   ]
                 },"order_incidents": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"item_name": string | null,"note": string,"order_id": string,"order_item_id": string | null,"photo_path": string | null,"quantity": number | null,"reason": string,"resolution": string | null,"resolved_at": string | null,"resolved_by": string | null,"route_id": string | null,"stage": string
+                    "cost": number,"created_at": string,"created_by": string | null,"id": string,"item_name": string | null,"note": string,"order_id": string,"order_item_id": string | null,"photo_path": string | null,"quantity": number | null,"reason": string,"resolution": string | null,"resolved_at": string | null,"resolved_by": string | null,"route_id": string | null,"stage": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"item_name"?: string | null,"note": string,"order_id": string,"order_item_id"?: string | null,"photo_path"?: string | null,"quantity"?: number | null,"reason": string,"resolution"?: string | null,"resolved_at"?: string | null,"resolved_by"?: string | null,"route_id"?: string | null,"stage"?: string
+                    "cost"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"item_name"?: string | null,"note": string,"order_id": string,"order_item_id"?: string | null,"photo_path"?: string | null,"quantity"?: number | null,"reason": string,"resolution"?: string | null,"resolved_at"?: string | null,"resolved_by"?: string | null,"route_id"?: string | null,"stage"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"item_name"?: string | null,"note"?: string,"order_id"?: string,"order_item_id"?: string | null,"photo_path"?: string | null,"quantity"?: number | null,"reason"?: string,"resolution"?: string | null,"resolved_at"?: string | null,"resolved_by"?: string | null,"route_id"?: string | null,"stage"?: string
+                    "cost"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"item_name"?: string | null,"note"?: string,"order_id"?: string,"order_item_id"?: string | null,"photo_path"?: string | null,"quantity"?: number | null,"reason"?: string,"resolution"?: string | null,"resolved_at"?: string | null,"resolved_by"?: string | null,"route_id"?: string | null,"stage"?: string
                   }
                   Relationships: [
                     {
@@ -391,14 +487,14 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "address_id": string | null,"address_snapshot": NonNullable<Json>,"cancelled_at": string | null,"code": string,"contact_name": string,"contact_phone": string,"created_at": string,"delivered_at": string | null,"delivered_by": string | null,"delivery_date": string,"delivery_fee": number,"delivery_photo_path": string | null,"id": string,"kind": string,"notes": string,"on_hold": boolean,"packed_at": string | null,"packed_by": string | null,"paid_at": string | null,"payment_status": string,"prepared_at": string | null,"slot_id": string,"slot_label": string,"status": string,"subscription_id": string | null,"subtotal": number,"total": number,"updated_at": string,"user_id": string,"zone_id": string
+                    "address_id": string | null,"address_snapshot": NonNullable<Json>,"cancelled_at": string | null,"code": string,"contact_name": string,"contact_phone": string,"created_at": string,"delivered_at": string | null,"delivered_by": string | null,"delivery_date": string,"delivery_fee": number,"delivery_photo_path": string | null,"id": string,"kind": string,"kitchen_id": string | null,"notes": string,"on_hold": boolean,"packed_at": string | null,"packed_by": string | null,"paid_at": string | null,"payment_status": string,"prepared_at": string | null,"slot_id": string,"slot_label": string,"status": string,"subscription_id": string | null,"subtotal": number,"tax_amount": number,"tax_name": string | null,"tax_rate": number,"total": number,"updated_at": string,"user_id": string,"zone_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "address_id"?: string | null,"address_snapshot": NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivered_at"?: string | null,"delivered_by"?: string | null,"delivery_date": string,"delivery_fee"?: number,"delivery_photo_path"?: string | null,"id"?: string,"kind"?: string,"notes"?: string,"on_hold"?: boolean,"packed_at"?: string | null,"packed_by"?: string | null,"paid_at"?: string | null,"payment_status"?: string,"prepared_at"?: string | null,"slot_id": string,"slot_label": string,"status"?: string,"subscription_id"?: string | null,"subtotal": number,"total": number,"updated_at"?: string,"user_id": string,"zone_id": string
+                    "address_id"?: string | null,"address_snapshot": NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivered_at"?: string | null,"delivered_by"?: string | null,"delivery_date": string,"delivery_fee"?: number,"delivery_photo_path"?: string | null,"id"?: string,"kind"?: string,"kitchen_id"?: string | null,"notes"?: string,"on_hold"?: boolean,"packed_at"?: string | null,"packed_by"?: string | null,"paid_at"?: string | null,"payment_status"?: string,"prepared_at"?: string | null,"slot_id": string,"slot_label": string,"status"?: string,"subscription_id"?: string | null,"subtotal": number,"tax_amount"?: number,"tax_name"?: string | null,"tax_rate"?: number,"total": number,"updated_at"?: string,"user_id": string,"zone_id": string
                   }
                   Update: {
-                    "address_id"?: string | null,"address_snapshot"?: NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivered_at"?: string | null,"delivered_by"?: string | null,"delivery_date"?: string,"delivery_fee"?: number,"delivery_photo_path"?: string | null,"id"?: string,"kind"?: string,"notes"?: string,"on_hold"?: boolean,"packed_at"?: string | null,"packed_by"?: string | null,"paid_at"?: string | null,"payment_status"?: string,"prepared_at"?: string | null,"slot_id"?: string,"slot_label"?: string,"status"?: string,"subscription_id"?: string | null,"subtotal"?: number,"total"?: number,"updated_at"?: string,"user_id"?: string,"zone_id"?: string
+                    "address_id"?: string | null,"address_snapshot"?: NonNullable<Json>,"cancelled_at"?: string | null,"code"?: string,"contact_name"?: string,"contact_phone"?: string,"created_at"?: string,"delivered_at"?: string | null,"delivered_by"?: string | null,"delivery_date"?: string,"delivery_fee"?: number,"delivery_photo_path"?: string | null,"id"?: string,"kind"?: string,"kitchen_id"?: string | null,"notes"?: string,"on_hold"?: boolean,"packed_at"?: string | null,"packed_by"?: string | null,"paid_at"?: string | null,"payment_status"?: string,"prepared_at"?: string | null,"slot_id"?: string,"slot_label"?: string,"status"?: string,"subscription_id"?: string | null,"subtotal"?: number,"tax_amount"?: number,"tax_name"?: string | null,"tax_rate"?: number,"total"?: number,"updated_at"?: string,"user_id"?: string,"zone_id"?: string
                   }
                   Relationships: [
                     {
@@ -412,6 +508,12 @@ isOneToOne: false
       columns: ["delivered_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_kitchen_id_fkey"
+      columns: ["kitchen_id"]
+isOneToOne: false
+      referencedRelation: "kitchens"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "orders_packed_by_fkey"
@@ -513,14 +615,14 @@ isOneToOne: false
                   ]
                 },"prep_batches": {
                   Row: {
-                    "delivery_date": string,"duration_seconds": number | null,"finished_at": string | null,"finished_by": string | null,"id": string,"kind": string,"kitchen_id": string,"name": string,"product_id": string | null,"quantity": number,"slot_id": string,"started_at": string,"started_by": string | null,"status": string
+                    "delivery_date": string,"duration_seconds": number | null,"finished_at": string | null,"finished_by": string | null,"id": string,"kind": string,"kitchen_id": string,"name": string,"product_id": string | null,"quantity": number,"slot_id": string,"started_at": string,"started_by": string | null,"status": string,"total_cost": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "delivery_date": string,"duration_seconds"?: number | null,"finished_at"?: string | null,"finished_by"?: string | null,"id"?: string,"kind": string,"kitchen_id": string,"name": string,"product_id"?: string | null,"quantity": number,"slot_id": string,"started_at"?: string,"started_by"?: string | null,"status"?: string
+                    "delivery_date": string,"duration_seconds"?: number | null,"finished_at"?: string | null,"finished_by"?: string | null,"id"?: string,"kind": string,"kitchen_id": string,"name": string,"product_id"?: string | null,"quantity": number,"slot_id": string,"started_at"?: string,"started_by"?: string | null,"status"?: string,"total_cost"?: number
                   }
                   Update: {
-                    "delivery_date"?: string,"duration_seconds"?: number | null,"finished_at"?: string | null,"finished_by"?: string | null,"id"?: string,"kind"?: string,"kitchen_id"?: string,"name"?: string,"product_id"?: string | null,"quantity"?: number,"slot_id"?: string,"started_at"?: string,"started_by"?: string | null,"status"?: string
+                    "delivery_date"?: string,"duration_seconds"?: number | null,"finished_at"?: string | null,"finished_by"?: string | null,"id"?: string,"kind"?: string,"kitchen_id"?: string,"name"?: string,"product_id"?: string | null,"quantity"?: number,"slot_id"?: string,"started_at"?: string,"started_by"?: string | null,"status"?: string,"total_cost"?: number
                   }
                   Relationships: [
                     {
@@ -675,14 +777,14 @@ isOneToOne: false
                   ]
                 },"roles": {
                   Row: {
-                    "created_at": string,"description": string,"id": string,"is_system": boolean,"key": string,"name": string
+                    "created_at": string,"description": string,"id": string,"is_system": boolean,"key": string,"kitchen_assignable": boolean,"name": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"description"?: string,"id"?: string,"is_system"?: boolean,"key": string,"name": string
+                    "created_at"?: string,"description"?: string,"id"?: string,"is_system"?: boolean,"key": string,"kitchen_assignable"?: boolean,"name": string
                   }
                   Update: {
-                    "created_at"?: string,"description"?: string,"id"?: string,"is_system"?: boolean,"key"?: string,"name"?: string
+                    "created_at"?: string,"description"?: string,"id"?: string,"is_system"?: boolean,"key"?: string,"kitchen_assignable"?: boolean,"name"?: string
                   }
                   Relationships: [
                     
@@ -729,14 +831,14 @@ isOneToOne: false
                   ]
                 },"subscription_payments": {
                   Row: {
-                    "amount": number,"created_at": string,"id": string,"kind": string,"order_id": string | null,"provider": string,"reference": string,"status": string,"subscription_id": string
+                    "amount": number,"created_at": string,"id": string,"kind": string,"order_id": string | null,"provider": string,"reference": string,"status": string,"subscription_id": string,"tax_amount": number,"tax_name": string | null,"tax_rate": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount": number,"created_at"?: string,"id"?: string,"kind": string,"order_id"?: string | null,"provider"?: string,"reference"?: string,"status": string,"subscription_id": string
+                    "amount": number,"created_at"?: string,"id"?: string,"kind": string,"order_id"?: string | null,"provider"?: string,"reference"?: string,"status": string,"subscription_id": string,"tax_amount"?: number,"tax_name"?: string | null,"tax_rate"?: number
                   }
                   Update: {
-                    "amount"?: number,"created_at"?: string,"id"?: string,"kind"?: string,"order_id"?: string | null,"provider"?: string,"reference"?: string,"status"?: string,"subscription_id"?: string
+                    "amount"?: number,"created_at"?: string,"id"?: string,"kind"?: string,"order_id"?: string | null,"provider"?: string,"reference"?: string,"status"?: string,"subscription_id"?: string,"tax_amount"?: number,"tax_name"?: string | null,"tax_rate"?: number
                   }
                   Relationships: [
                     {
@@ -799,6 +901,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"tax_rates": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"name": string,"rate": number,"valid_from": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"name": string,"rate": number,"valid_from": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"name"?: string,"rate"?: number,"valid_from"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tax_rates_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"user_consents": {
                   Row: {
                     "accepted": boolean,"created_at": string,"document": string,"id": string,"ip": string | null,"method": string,"user_agent": string | null,"user_id": string,"version": string
@@ -813,6 +935,32 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "user_consents_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"user_kitchens": {
+                  Row: {
+                    "created_at": string,"kitchen_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"kitchen_id": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"kitchen_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_kitchens_kitchen_id_fkey"
+      columns: ["kitchen_id"]
+isOneToOne: false
+      referencedRelation: "kitchens"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_kitchens_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
@@ -900,7 +1048,21 @@ isOneToOne: false
                 }
           }
           Views: {
-            "prep_stats": {
+            "order_food_costs": {
+                  Row: {
+                    "food_cost": number | null,"order_id": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"prep_stats": {
                   Row: {
                     "batches": number | null,"kind": string,"product_id": string | null,"seconds_per_unit": number | null,"units": number | null
                   }
@@ -942,6 +1104,9 @@ isOneToOne: false
             "add_order_to_route":
 { Args: { "p_after_seq": number,"p_eta": string,"p_extra_m": number,"p_extra_s": number,"p_order_id": string,"p_route_id": string }; Returns: number
                            },
+"add_team_member":
+{ Args: { "p_email": string,"p_kitchen_id": string,"p_role_id": string }; Returns: string
+                           },
 "admin_user_auth":
 { Args: { "p_user_id": string }; Returns: {
               "email_confirmed_at": string,"last_sign_in_at": string,"providers": (string)[]
@@ -949,6 +1114,9 @@ isOneToOne: false
                            },
 "basket_max_orders":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"can_kitchen":
+{ Args: { "k": string }; Returns: boolean
                            },
 "can_pack_route":
 { Args: { "p_route_id": string }; Returns: boolean
@@ -994,8 +1162,14 @@ isOneToOne: false
 "finish_prep_batch":
 { Args: { "p_batch_id": string }; Returns: number
                            },
+"has_open_kitchen_incident":
+{ Args: { "p_order_id": string }; Returns: boolean
+                           },
 "has_permission":
 { Args: { "perm": string }; Returns: boolean
+                           },
+"has_restricted_role":
+{ Args: { "p_user": string }; Returns: boolean
                            },
 "incident_reason_label":
 { Args: { "p_reason": string }; Returns: string
@@ -1004,6 +1178,9 @@ isOneToOne: false
 { Args: { "rid": string }; Returns: boolean
                            },
 "item_in_progress":
+{ Args: { "p_order_item_id": string }; Returns: number
+                           },
+"item_unit_cost":
 { Args: { "p_order_item_id": string }; Returns: number
                            },
 "kitchen_orders":
@@ -1022,6 +1199,7 @@ isOneToOne: false
 "delivery_photo_path": string | null,
 "id": string,
 "kind": string,
+"kitchen_id": string | null,
 "notes": string,
 "on_hold": boolean,
 "packed_at": string | null,
@@ -1034,6 +1212,9 @@ isOneToOne: false
 "status": string,
 "subscription_id": string | null,
 "subtotal": number,
+"tax_amount": number,
+"tax_name": string | null,
+"tax_rate": number,
 "total": number,
 "updated_at": string,
 "user_id": string,
@@ -1047,6 +1228,9 @@ isOneToOne: false
       } },
 "lock_route_packing":
 { Args: { "p_route_id": string }; Returns: undefined
+                           },
+"manages_user":
+{ Args: { "p_user": string }; Returns: boolean
                            },
 "mark_arrived":
 { Args: { "p_order_id": string }; Returns: string
@@ -1077,6 +1261,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"my_kitchens":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
 "my_permissions":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
@@ -1110,6 +1297,9 @@ isOneToOne: false
                            },
 "record_routing_factor":
 { Args: { "p_measured": number }; Returns: number
+                           },
+"renumber_route":
+{ Args: { "p_route_id": string }; Returns: undefined
                            },
 "report_delivery_incident":
 { Args: { "p_note": string,"p_order_id": string,"p_photo_path"?: string,"p_reason": string }; Returns: undefined
@@ -1153,6 +1343,9 @@ isOneToOne: false
 "set_delivery_wait_minutes":
 { Args: { "p_minutes": number }; Returns: undefined
                            },
+"set_kitchen_min_stock":
+{ Args: { "p_ingredient_id": string,"p_kitchen_id": string,"p_min": number }; Returns: undefined
+                           },
 "set_order_status":
 { Args: { "p_note"?: string,"p_order_id": string,"p_status": string }; Returns: undefined
                            },
@@ -1161,6 +1354,15 @@ isOneToOne: false
                            },
 "set_user_active":
 { Args: { "p_active": boolean,"p_reason"?: string,"p_user_id": string }; Returns: undefined
+                           },
+"set_user_kitchens":
+{ Args: { "p_kitchen_ids": (string)[],"p_user_id": string }; Returns: undefined
+                           },
+"slot_kitchen_pending":
+{ Args: { "p_date": string,"p_kitchen_id": string,"p_slot_id": string }; Returns: number
+                           },
+"slot_unprepared":
+{ Args: { "p_date": string,"p_kitchen_id": string,"p_slot_id": string }; Returns: number
                            },
 "start_delivery_route":
 { Args: { "p_route_id": string }; Returns: undefined
@@ -1177,11 +1379,27 @@ isOneToOne: false
 "sync_builder_option_images":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"tax_on":
+{ Args: { "p_date": string }; Returns: {
+              "name": string,"rate": number
+            }[]
+                           },
 "today_local":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"transfer_stock":
+{ Args: { "p_from": string,"p_ingredient_id": string,"p_note"?: string,"p_quantity": number,"p_to": string }; Returns: string
+                           },
+"transfer_targets":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "id": string,"name": string
+            }[]
+                           },
 "update_subscription_delivery":
 { Args: { "p_delivery": Json,"p_order_id": string,"p_pay"?: boolean }; Returns: number
+                           },
+"user_can_kitchen":
+{ Args: { "k": string,"p_user": string }; Returns: boolean
                            },
 "verify_route_all":
 { Args: { "p_route_id": string }; Returns: number

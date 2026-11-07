@@ -2,8 +2,10 @@ import Link from "next/link";
 import { AlertTriangle, Boxes, PackageX, Wallet } from "lucide-react";
 import { UserAvatar } from "@/components/dashboard/UserAvatar";
 import { EmptyState, PageHeader, Panel, StatCard, StatusBadge, type StatusTone } from "@/components/dashboard/ui";
+import { MinStockForm } from "@/components/inventory/MinStockForm";
 import { MovementForm } from "@/components/inventory/MovementForm";
 import { loadIngredients } from "@/lib/catalog-admin";
+import { loadKitchens } from "@/lib/operations";
 import { formatQty, type Unit } from "@/lib/pricing";
 import { requirePermission } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -14,7 +16,9 @@ const KIND: Record<string, { label: string; tone: StatusTone }> = {
   perdida: { label: "Pérdida", tone: "red" },
   ajuste: { label: "Ajuste", tone: "blue" },
   consumo: { label: "Consumo", tone: "gray" },
+  traslado: { label: "Traslado", tone: "amber" },
 };
+const short = (name?: string) => (name ?? "").replace(/^Cocina /, "");
 /** Fecha ISO de hace `days` días (para el resumen de pérdidas). */
 function daysAgo(days: number) {
   return new Date(Date.now() - days * 86400000).toISOString();
@@ -25,37 +29,66 @@ const REASON: Record<string, string> = { caducidad: "caducidad", dano: "daño", 
 export default async function InventarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filtro?: string; ingrediente?: string }>;
+  searchParams: Promise<{ filtro?: string; ingrediente?: string; cocina?: string }>;
 }) {
   const session = await requirePermission("inventory.view");
   const canManage = session.permissions.has("inventory.manage");
-  const { filtro = "", ingrediente = "" } = await searchParams;
+  const { filtro = "", ingrediente = "", cocina = "" } = await searchParams;
   const supabase = await createClient();
+
+  // Cada cocina tiene su inventario. El superadministrador puede ver además el total de todas.
+  const kitchens = (await loadKitchens()).filter((k) => k.active);
+  const all = cocina === "todas" && kitchens.length > 1;
+  const kitchen = all ? null : (kitchens.find((k) => k.id === cocina) ?? kitchens[0]);
+  const scope = all ? kitchens.map((k) => k.id) : kitchen ? [kitchen.id] : [];
+  const kitchenName = (id: string | null) => short(kitchens.find((k) => k.id === id)?.name);
+  const q = (extra: Record<string, string>) => {
+    const p = new URLSearchParams({ ...(kitchens.length > 1 ? { cocina: all ? "todas" : (kitchen?.id ?? "") } : {}), ...extra });
+    for (const [k, v] of [...p.entries()]) if (!v) p.delete(k);
+    const t = p.toString();
+    return `/admin/inventario${t ? `?${t}` : ""}`;
+  };
 
   let movementsQuery = supabase
     .from("inventory_movements")
-    .select("id, kind, quantity, reason, note, unit_cost, created_at, ingredient_id, ingredients(name, unit), profiles(full_name, email, avatar_url)")
+    .select("id, kitchen_id, counterpart_kitchen_id, kind, quantity, reason, note, unit_cost, created_at, ingredient_id, ingredients(name, unit), profiles(full_name, email, avatar_url)")
+    .in("kitchen_id", scope)
     .order("created_at", { ascending: false })
     .limit(40);
   if (/^[0-9a-f-]{36}$/.test(ingrediente)) movementsQuery = movementsQuery.eq("ingredient_id", ingrediente);
 
-  const [ingredients, { data: movements }, { data: losses }] = await Promise.all([
+  const [catalog, { data: stockRows }, { data: movements }, { data: losses }] = await Promise.all([
     loadIngredients(),
+    supabase.from("kitchen_stock").select("kitchen_id, ingredient_id, stock, min_stock, cost_per_unit").in("kitchen_id", scope),
     movementsQuery,
     supabase
       .from("inventory_movements")
-      .select("quantity, ingredients(cost_per_unit)")
+      .select("quantity, unit_cost")
+      .in("kitchen_id", scope)
       .eq("kind", "perdida")
       .gte("created_at", daysAgo(30)),
   ]);
 
+  // Stock de la cocina (o la suma de todas): mismo ingrediente del catálogo, valores de cada cocina.
+  const ingredients = catalog.map((i) => {
+    const rows = (stockRows ?? []).filter((r) => r.ingredient_id === i.id);
+    const stock = rows.reduce((s, r) => s + Number(r.stock), 0);
+    const value = rows.reduce((s, r) => s + Math.max(0, Number(r.stock)) * Number(r.cost_per_unit), 0);
+    return {
+      ...i,
+      stock,
+      min_stock: rows.reduce((s, r) => s + Number(r.min_stock), 0),
+      cost_per_unit: stock > 0 ? value / stock : Number(rows[0]?.cost_per_unit ?? i.cost_per_unit),
+      value,
+      byKitchen: rows.map((r) => ({ kitchen: kitchenName(r.kitchen_id), stock: Number(r.stock) })),
+    };
+  });
+
   const active = ingredients.filter((i) => i.active);
   const low = active.filter((i) => i.min_stock > 0 && i.stock > 0 && i.stock < i.min_stock);
   const out = active.filter((i) => i.stock <= 0);
-  const value = Math.round(active.reduce((s, i) => s + Math.max(0, i.stock) * i.cost_per_unit, 0));
-  const lossValue = Math.round(
-    (losses ?? []).reduce((s, l) => s + Math.abs(Number(l.quantity)) * Number(l.ingredients?.cost_per_unit ?? 0), 0)
-  );
+  const value = Math.round(active.reduce((s, i) => s + i.value, 0));
+  const lossValue = Math.round((losses ?? []).reduce((s, l) => s + Math.abs(Number(l.quantity)) * Number(l.unit_cost ?? 0), 0));
 
   const shown = filtro === "alertas" ? [...out, ...low] : active;
   const selected = ingredients.find((i) => i.id === ingrediente);
@@ -65,8 +98,30 @@ export default async function InventarioPage({
       <PageHeader
         eyebrow="Productos"
         title="Inventario"
-        description="Stock de cada ingrediente. Las compras, pérdidas y conteos quedan en el historial; el consumo por preparación se descontará cuando la cocina marque los pedidos como preparados."
+        description="Cada cocina lleva su propio inventario: stock, mínimo y costo. Las compras, pérdidas, conteos y traslados quedan en el historial; al terminar una tanda se descuenta lo que usó la cocina."
       />
+
+      {kitchens.length > 1 && (
+        <div className="mb-5 flex flex-wrap gap-1 rounded-full bg-white p-1 text-sm font-semibold shadow-sm ring-1 ring-[#1F4D36]/[0.06] sm:inline-flex">
+          {kitchens.map((k) => (
+            <Link
+              key={k.id}
+              href={`/admin/inventario?cocina=${k.id}${filtro ? `&filtro=${filtro}` : ""}`}
+              className={cn("rounded-full px-4 py-2", kitchen?.id === k.id ? "bg-[#1F4D36] text-white" : "text-[#1B1B1B]/55 hover:text-[#1F4D36]")}
+            >
+              {short(k.name)}
+            </Link>
+          ))}
+          {session.allKitchens && (
+            <Link
+              href={`/admin/inventario?cocina=todas${filtro ? `&filtro=${filtro}` : ""}`}
+              className={cn("rounded-full px-4 py-2", all ? "bg-[#1F4D36] text-white" : "text-[#1B1B1B]/55 hover:text-[#1F4D36]")}
+            >
+              Todas
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard icon={Boxes} label="Ingredientes activos" value={active.length} tone="dark" />
@@ -82,11 +137,11 @@ export default async function InventarioPage({
             title="Stock"
             actions={
               <div className="flex gap-1 rounded-full bg-[#F8F7F2] p-1 text-xs font-semibold">
-                <Link href="/admin/inventario" className={cn("rounded-full px-3 py-1.5", !filtro ? "bg-white text-[#1F4D36] shadow-sm" : "text-[#1B1B1B]/50")}>
+                <Link href={q({})} className={cn("rounded-full px-3 py-1.5", !filtro ? "bg-white text-[#1F4D36] shadow-sm" : "text-[#1B1B1B]/50")}>
                   Todos
                 </Link>
                 <Link
-                  href="/admin/inventario?filtro=alertas"
+                  href={q({ filtro: "alertas" })}
                   className={cn("rounded-full px-3 py-1.5", filtro === "alertas" ? "bg-white text-[#1F4D36] shadow-sm" : "text-[#1B1B1B]/50")}
                 >
                   Alertas ({low.length + out.length})
@@ -105,10 +160,12 @@ export default async function InventarioPage({
                   const state = i.stock <= 0 ? "out" : i.min_stock > 0 && i.stock < i.min_stock ? "low" : "ok";
                   return (
                     <li key={i.id}>
-                      <Link href={`/admin/inventario?ingrediente=${i.id}${filtro ? `&filtro=${filtro}` : ""}`} className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 hover:bg-[#F8F7F2]/60 sm:flex-nowrap sm:px-6", ingrediente === i.id && "bg-[#F4F8F2]")}>
+                      <Link href={q({ ingrediente: i.id, filtro })} className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 hover:bg-[#F8F7F2]/60 sm:flex-nowrap sm:px-6", ingrediente === i.id && "bg-[#F4F8F2]")}>
                         <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
                           <p className="truncate text-sm font-semibold text-[#1F4D36]">{i.name}</p>
-                          <p className="text-xs text-[#1B1B1B]/40">{i.categoryName}</p>
+                          <p className="truncate text-xs text-[#1B1B1B]/40">
+                            {all ? i.byKitchen.map((b) => `${b.kitchen} ${formatQty(b.stock, i.unit)}`).join(" · ") : i.categoryName}
+                          </p>
                         </div>
                         <div className="order-last basis-full sm:order-none sm:basis-auto sm:flex-1">
                           <div className="relative h-2 overflow-hidden rounded-full bg-[#F1F4EE]">
@@ -145,7 +202,7 @@ export default async function InventarioPage({
             title={selected ? `Movimientos · ${selected.name}` : "Últimos movimientos"}
             actions={
               selected && (
-                <Link href={`/admin/inventario${filtro ? `?filtro=${filtro}` : ""}`} className="text-xs font-semibold text-[#1F4D36]/70 hover:underline">
+                <Link href={q({ filtro })} className="text-xs font-semibold text-[#1F4D36]/70 hover:underline">
                   Ver todos
                 </Link>
               )
@@ -158,7 +215,12 @@ export default async function InventarioPage({
                 {movements.map((m) => {
                   const unit = (m.ingredients?.unit ?? "g") as Unit;
                   const qty = Number(m.quantity);
-                  const detail = [m.reason && REASON[m.reason], m.note].filter(Boolean).join(" · ");
+                  const detail = [
+                    all && kitchenName(m.kitchen_id),
+                    m.kind === "traslado" && `${qty > 0 ? "desde" : "a"} ${kitchenName(m.counterpart_kitchen_id) || "otra cocina"}`,
+                    m.reason && REASON[m.reason],
+                    m.note,
+                  ].filter(Boolean).join(" · ");
                   return (
                     <li key={m.id} className="px-5 py-3">
                       <div className="flex items-center justify-between gap-3">
@@ -210,7 +272,12 @@ export default async function InventarioPage({
                             {formatQty(Math.abs(qty), unit)}
                           </td>
                           <td className="max-w-[220px] truncate px-3 py-3 text-xs text-[#1B1B1B]/55">
-                            {[m.reason && REASON[m.reason], m.note].filter(Boolean).join(" · ") || "—"}
+                            {[
+                              all && kitchenName(m.kitchen_id),
+                              m.kind === "traslado" && `${qty > 0 ? "desde" : "a"} ${kitchenName(m.counterpart_kitchen_id) || "otra cocina"}`,
+                              m.reason && REASON[m.reason],
+                              m.note,
+                            ].filter(Boolean).join(" · ") || "—"}
                           </td>
                           <td className="px-6 py-3">
                             {m.profiles ? (
@@ -237,13 +304,26 @@ export default async function InventarioPage({
           </Panel>
         </div>
 
-        <div className="xl:sticky xl:top-24">
-          {canManage ? (
-            <MovementForm
-              key={ingrediente}
-              defaultIngredient={selected?.id}
-              ingredients={active.map(({ id, name, unit, stock }) => ({ id, name, unit, stock }))}
-            />
+        <div className="space-y-6 xl:sticky xl:top-24">
+          {!kitchen ? (
+            <Panel title="Todas las cocinas">
+              <p className="text-sm text-[#1B1B1B]/55">Aquí ves el total de las cocinas. Para registrar movimientos, elige una cocina.</p>
+            </Panel>
+          ) : canManage ? (
+            <>
+              <MovementForm
+                key={`${kitchen.id}-${ingrediente}`}
+                kitchenId={kitchen.id}
+                otherKitchens={(session.allKitchens ? kitchens : ((await supabase.rpc("transfer_targets")).data ?? []))
+                  .filter((k) => k.id !== kitchen.id)
+                  .map((k) => ({ id: k.id, name: short(k.name) }))}
+                defaultIngredient={selected?.id}
+                ingredients={active.map(({ id, name, unit, stock }) => ({ id, name, unit, stock }))}
+              />
+              {selected && (
+                <MinStockForm key={`min-${kitchen.id}-${selected.id}`} kitchenId={kitchen.id} ingredientId={selected.id} name={selected.name} unit={selected.unit} current={selected.min_stock} />
+              )}
+            </>
           ) : (
             <Panel title="Solo lectura">
               <p className="text-sm text-[#1B1B1B]/55">Tu rol puede ver el inventario. Para registrar entradas o pérdidas, pide el permiso “Registrar entradas, ajustes y pérdidas”.</p>

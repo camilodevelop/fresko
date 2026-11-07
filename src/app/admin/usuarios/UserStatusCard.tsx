@@ -13,6 +13,7 @@ export function UserStatusCard({
   userId,
   active,
   isMe,
+  lockedNote,
   deactivatedAt,
   reason,
   by,
@@ -20,6 +21,8 @@ export function UserStatusCard({
   userId: string;
   active: boolean;
   isMe: boolean;
+  /** Si no se puede cambiar por permisos (p. ej. un administrador visto por un admin de cocina). */
+  lockedNote?: string;
   deactivatedAt: string | null;
   reason: string | null;
   by: string | null;
@@ -59,8 +62,8 @@ export function UserStatusCard({
         </div>
       )}
 
-      {isMe ? (
-        <p className="mt-3 text-xs text-[#1B1B1B]/45">No puedes inactivar tu propia cuenta.</p>
+      {isMe || lockedNote ? (
+        <p className="mt-3 text-xs text-[#1B1B1B]/45">{isMe ? "No puedes inactivar tu propia cuenta." : lockedNote}</p>
       ) : active ? (
         open ? (
           <div className="mt-3 space-y-2">

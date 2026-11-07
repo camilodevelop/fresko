@@ -52,7 +52,7 @@ export default async function AdminHomePage() {
       : null,
     can("zones.manage") ? supabase.from("zones").select("id", { count: "exact", head: true }).eq("active", true) : null,
     can("zones.manage") ? supabase.from("cities").select("id", { count: "exact", head: true }).eq("active", true) : null,
-    can("inventory.view") ? supabase.from("ingredients").select("stock, min_stock").eq("active", true) : null,
+    can("inventory.view") ? supabase.from("kitchen_stock").select("stock, min_stock, ingredients!inner(active)").eq("ingredients.active", true) : null,
     can("orders.view")
       ? supabase.from("orders").select("status").eq("delivery_date", today).not("status", "in", "(pendiente_pago,cancelado)")
       : null,

@@ -16,7 +16,9 @@ export type Permission =
   | "orders.manage"
   | "kitchen.prepare"
   | "delivery.deliver"
-  | "reports.view";
+  | "reports.view"
+  | "finance.manage"
+  | "kitchens.all";
 
 export type SessionInfo = {
   userId: string;
@@ -25,6 +27,8 @@ export type SessionInfo = {
   avatarUrl: string | null;
   roleNames: string[];
   permissions: Set<string>;
+  /** Superadministrador: ve y opera todas las cocinas. Si no, solo las asignadas (RLS). */
+  allKitchens: boolean;
   /** Personal (admin, cocina, domicilios…): usa el panel, no la zona de clientes. */
   isStaff: boolean;
   /** false si solo entra con Google (no tiene contraseña propia). */
@@ -65,6 +69,7 @@ export const getSession = cache(async (): Promise<SessionInfo | null> => {
     avatarUrl: profile?.avatar_url ?? null,
     roleNames: (roles ?? []).map((r) => r.roles.name),
     permissions,
+    allKitchens: permissions.has("kitchens.all"),
     isStaff: permissions.has("admin.access"),
     hasPassword: (user.identities ?? []).some((i) => i.provider === "email"),
     needsConsent: !(

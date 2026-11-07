@@ -23,6 +23,13 @@ const ADMIN_GROUPS: { label: string; items: AdminItem[] }[] = [
     ],
   },
   {
+    label: "Negocio",
+    items: [
+      { href: "/admin/cuentas", label: "Cuentas", icon: "wallet", permission: "reports.view", description: "Ventas, costos, pérdidas, gastos y utilidad real." },
+      { href: "/admin/productividad", label: "Productividad", icon: "gauge", permission: "reports.view", description: "Rendimiento del equipo y costo real de cada plato." },
+    ],
+  },
+  {
     label: "Productos",
     items: [
       { href: "/admin/catalogo", label: "Catálogo", icon: "salad", permission: "catalog.manage", description: "Productos, recetas e ingredientes." },

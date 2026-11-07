@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { ArrowDownToLine, ClipboardCheck, Trash } from "lucide-react";
+import { ArrowDownToLine, ArrowRightLeft, ClipboardCheck, Trash } from "lucide-react";
 import { registerMovement, type MovementState } from "@/app/admin/inventario/actions";
 import { notify } from "@/lib/notify";
 import { Panel } from "@/components/dashboard/ui";
@@ -19,10 +19,22 @@ const KINDS = [
   { id: "entrada", label: "Entrada", icon: ArrowDownToLine, help: "Compra o recepción de mercancía." },
   { id: "perdida", label: "Pérdida", icon: Trash, help: "Producto vencido, dañado o descartado." },
   { id: "ajuste", label: "Conteo", icon: ClipboardCheck, help: "Escribe lo que contaste; se ajusta la diferencia." },
+  { id: "traslado", label: "Traslado", icon: ArrowRightLeft, help: "Envía stock a otra cocina; viaja con su costo." },
 ] as const;
 
-export function MovementForm({ ingredients, defaultIngredient }: { ingredients: Ing[]; defaultIngredient?: string }) {
+export function MovementForm({
+  kitchenId,
+  otherKitchens,
+  ingredients,
+  defaultIngredient,
+}: {
+  kitchenId: string;
+  otherKitchens: { id: string; name: string }[];
+  ingredients: Ing[];
+  defaultIngredient?: string;
+}) {
   const [kind, setKind] = useState<(typeof KINDS)[number]["id"]>("entrada");
+  const kinds = KINDS.filter((k) => k.id !== "traslado" || otherKitchens.length > 0);
   const [ingredientId, setIngredientId] = useState(defaultIngredient ?? "");
   const ing = ingredients.find((i) => i.id === ingredientId);
   const unit = ing ? displayUnit(ing.unit) : "";
@@ -39,11 +51,12 @@ export function MovementForm({ ingredients, defaultIngredient }: { ingredients: 
             : first(
                 rules.required(f.quantity, "Escribe la cantidad."),
                 rules.positive(f.quantity, "Debe ser mayor a 0."),
-                kind === "perdida" && ing && qty > stockDisplay
-                  ? `Supera el stock actual (${formatQty(ing.stock, ing.unit)}). Usa un conteo.`
+                (kind === "perdida" || kind === "traslado") && ing && qty > stockDisplay
+                  ? `Supera el stock actual (${formatQty(ing.stock, ing.unit)}).${kind === "perdida" ? " Usa un conteo." : ""}`
                   : null
               ),
         reason: kind === "perdida" ? rules.required(f.reason, "Elige el motivo.") : null,
+        to_kitchen_id: kind === "traslado" ? rules.required(f.to_kitchen_id, "Elige la cocina de destino.") : null,
         total_cost: kind === "entrada" && String(f.total_cost ?? "").trim() ? rules.money(f.total_cost) : null,
       };
     },
@@ -64,8 +77,9 @@ export function MovementForm({ ingredients, defaultIngredient }: { ingredients: 
     <Panel title="Registrar movimiento" description={KINDS.find((k) => k.id === kind)?.help}>
       <form action={action} {...v.formProps()} className="space-y-4">
         <input type="hidden" name="kind" value={kind} />
-        <div className="grid grid-cols-3 gap-1 rounded-2xl bg-[#F8F7F2] p-1">
-          {KINDS.map((k) => (
+        <input type="hidden" name="kitchen_id" value={kitchenId} />
+        <div className={cn("grid gap-1 rounded-2xl bg-[#F8F7F2] p-1", kinds.length === 4 ? "grid-cols-4" : "grid-cols-3")}>
+          {kinds.map((k) => (
             <button
               key={k.id}
               type="button"
@@ -117,6 +131,16 @@ export function MovementForm({ ingredients, defaultIngredient }: { ingredients: 
               </div>
             </Field>
           )}
+          {kind === "traslado" && (
+            <Field label="Para" name={v.idFor("to_kitchen_id")} error={v.error("to_kitchen_id")}>
+              <select {...v.field("to_kitchen_id")} defaultValue="" className="h-11 w-full rounded-2xl border border-[#1F4D36]/15 bg-white px-3 text-sm">
+                <option value="" disabled>Elige…</option>
+                {otherKitchens.map((k) => (
+                  <option key={k.id} value={k.id}>{k.name}</option>
+                ))}
+              </select>
+            </Field>
+          )}
           {kind === "perdida" && (
             <Field label="Motivo" name={v.idFor("reason")} error={v.error("reason")}>
               <select {...v.field("reason")} defaultValue="" className="h-11 w-full rounded-2xl border border-[#1F4D36]/15 bg-white px-3 text-sm">
@@ -129,7 +153,7 @@ export function MovementForm({ ingredients, defaultIngredient }: { ingredients: 
           )}
         </div>
         {kind === "entrada" && (
-          <p className="-mt-2 text-xs text-[#1B1B1B]/45">Si pones el costo, se actualiza el costo promedio del ingrediente y de las recetas.</p>
+          <p className="-mt-2 text-xs text-[#1B1B1B]/45">Si pones el costo, se actualiza el costo promedio del ingrediente en esta cocina.</p>
         )}
 
         <Field label="Nota" optional name={v.idFor("note")}>

@@ -10,6 +10,8 @@ import { requirePermission } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { SUBSCRIPTION_STATUS, subscriptionState, todayBogota } from "@/lib/subscriptions";
 import { formatPrice } from "@/lib/utils";
+import { loadKitchens } from "@/lib/operations";
+import { UserKitchens } from "../UserKitchens";
 import { UserRoleToggle } from "../UserRoleToggle";
 import { UserStatusCard } from "../UserStatusCard";
 
@@ -33,7 +35,7 @@ export default async function UsuarioPage({ params }: { params: Promise<{ id: st
 
   const [{ data: roles }, { data: auth }, { data: addresses }, { data: orders, count: orderCount }, { data: subs }, { data: consents }, { data: history }] =
     await Promise.all([
-      supabase.from("roles").select("id, key, name").order("created_at"),
+      supabase.from("roles").select("id, key, name, kitchen_assignable").order("created_at"),
       supabase.rpc("admin_user_auth", { p_user_id: id }),
       supabase.from("addresses").select("id, label, address, details, is_default, zones(name)").eq("user_id", id).order("is_default", { ascending: false }),
       supabase
@@ -48,7 +50,16 @@ export default async function UsuarioPage({ params }: { params: Promise<{ id: st
     ]);
 
   const assigned = new Set(user.user_roles.map((r) => r.role_id));
-  const staffRoles = (roles ?? []).filter((r) => r.key !== "cliente");
+  const allStaffRoles = (roles ?? []).filter((r) => r.key !== "cliente");
+  // El admin de cocina no toca administradores y solo asigna cocinero y domiciliario.
+  const restricted = allStaffRoles.some((r) => !r.kitchen_assignable && assigned.has(r.id));
+  const locked = !session.allKitchens && restricted;
+  const staffRoles = session.allKitchens ? allStaffRoles : allStaffRoles.filter((r) => r.kitchen_assignable || assigned.has(r.id));
+  const isSuperUser = allStaffRoles.some((r) => r.key === "admin" && assigned.has(r.id));
+  const [kitchens, { data: userKitchens }] = await Promise.all([
+    loadKitchens().then((ks) => ks.filter((k) => k.active)),
+    supabase.from("user_kitchens").select("kitchen_id").eq("user_id", id),
+  ]);
   const isStaff = staffRoles.some((r) => assigned.has(r.id));
   const authInfo = auth?.[0];
 
@@ -231,6 +242,7 @@ export default async function UsuarioPage({ params }: { params: Promise<{ id: st
             userId={user.id}
             active={user.active}
             isMe={user.id === session.userId}
+            lockedNote={locked ? "Solo el superadministrador puede activar o inactivar a un administrador." : undefined}
             deactivatedAt={user.deactivated_at}
             reason={user.deactivation_reason}
             by={user.deactivated_by ? (nameOf.get(user.deactivated_by) ?? null) : null}
@@ -241,7 +253,7 @@ export default async function UsuarioPage({ params }: { params: Promise<{ id: st
               {staffRoles.map((role) => (
                 <label key={role.id} className="flex items-center justify-between gap-2 rounded-xl bg-[#F8F7F2] px-3 py-2 text-sm font-medium text-[#1B1B1B]/70">
                   <span>{role.name}</span>
-                  <UserRoleToggle userId={user.id} roleId={role.id} roleName={role.name} checked={assigned.has(role.id)} locked={user.id === session.userId && role.key === "admin"} />
+                  <UserRoleToggle userId={user.id} roleId={role.id} roleName={role.name} checked={assigned.has(role.id)} locked={(user.id === session.userId && role.key === "admin") || locked || (!session.allKitchens && !role.kitchen_assignable)} />
                 </label>
               ))}
             </div>
@@ -258,6 +270,16 @@ export default async function UsuarioPage({ params }: { params: Promise<{ id: st
               </div>
             )}
           </Panel>
+
+          {isStaff && (
+            <UserKitchens
+              userId={user.id}
+              kitchens={kitchens.map((k) => ({ id: k.id, name: k.name }))}
+              assigned={(userKitchens ?? []).map((k) => k.kitchen_id)}
+              locked={locked}
+              superadmin={isSuperUser}
+            />
+          )}
 
           <Panel icon={KeyRound} title="Acceso">
             <dl className="mt-3 space-y-2 text-sm">

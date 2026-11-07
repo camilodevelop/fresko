@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { IncidentResolve } from "@/components/admin-orders/IncidentResolve";
+import { OrderTrace } from "@/components/admin-orders/OrderTrace";
 import { notFound } from "next/navigation";
 import { CalendarDays, ExternalLink, MapPin, MessageSquareText, Phone, UserRound } from "lucide-react";
 import { OrderStatusActions } from "@/components/admin-orders/OrderStatusActions";
 import { PageHeader, Panel } from "@/components/dashboard/ui";
 import { OrderLiveRefresh } from "@/components/orders/OrderLiveRefresh";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/orders/OrderStatusBadge";
-import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { ORDER_STATUS, formatDeliveryDate } from "@/lib/delivery";
 import { formatPhone, whatsappDigits } from "@/lib/phone";
 import { requirePermission } from "@/lib/supabase/auth";
@@ -26,10 +26,6 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
     .eq("code", code.toUpperCase())
     .maybeSingle();
   if (!order) notFound();
-  // Foto de la entrega (bucket privado): enlace temporal.
-  const photo = order.delivery_photo_path
-    ? (await supabase.storage.from("delivery-proofs").createSignedUrl(order.delivery_photo_path, 3600)).data?.signedUrl ?? null
-    : null;
 
   const addr = order.address_snapshot as { label: string; address: string; details: string; lat: number; lng: number };
   const fmt = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" });
@@ -73,26 +69,10 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
             )}
             canManage={canManage}
           />
-          <Panel title="Estado">
-            <OrderTimeline status={order.status} />
-            {photo && (
-              <a href={photo} target="_blank" rel="noreferrer" className="mt-5 flex items-center gap-3 rounded-2xl bg-[#F4F8F2] p-3 text-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element -- enlace firmado temporal */}
-                <img src={photo} alt="Foto de la entrega" className="h-16 w-16 rounded-xl object-cover" />
-                <span>
-                  <span className="block font-semibold text-[#1F4D36]">Foto de la entrega</span>
-                  <span className="text-xs text-[#1B1B1B]/50">
-                    {order.delivered_at
-                      ? new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" }).format(new Date(order.delivered_at))
-                      : ""}{" "}
-                    · toca para ampliar
-                  </span>
-                </span>
-              </a>
-            )}
-          </Panel>
 
-          <Panel title="Para preparar" description={`${order.order_items.reduce((s, i) => s + i.quantity, 0)} platos`}>
+          <OrderTrace order={order} showMoney={session.permissions.has("reports.view")} />
+
+          <Panel title="Detalle de la compra" description={`${order.order_items.reduce((s, i) => s + i.quantity, 0)} platos`}>
             <ul className="divide-y divide-[#1F4D36]/[0.06] text-sm">
               {order.order_items.map((item) => {
                 const opts = (item.options as { name: string; step: string }[]) ?? [];

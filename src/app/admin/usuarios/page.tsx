@@ -5,12 +5,14 @@ import { EmptyState, PageHeader, Panel } from "@/components/dashboard/ui";
 import { requirePermission } from "@/lib/supabase/auth";
 import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
+import { loadKitchens } from "@/lib/operations";
 import { cn } from "@/lib/utils";
+import { AddTeamMember } from "./AddTeamMember";
 import { UserRoleToggle } from "./UserRoleToggle";
 
 const PAGE_SIZE = 50;
 
-type Role = { id: string; key: string; name: string };
+type Role = { id: string; key: string; name: string; kitchen_assignable: boolean };
 type Person = {
   id: string;
   full_name: string;
@@ -28,16 +30,24 @@ const fmtDate = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short
 export default async function UsuariosPage({ searchParams }: { searchParams: Promise<{ q?: string; vista?: string; pagina?: string }> }) {
   const session = await requirePermission("users.manage");
   const { q = "", vista, pagina } = await searchParams;
-  const view = vista === "clientes" ? "clientes" : "equipo";
+  // El administrador de cocina solo ve y gestiona el equipo de sus cocinas (los clientes son del superadmin).
+  const isSuper = session.allKitchens;
+  const view = vista === "clientes" && isSuper ? "clientes" : "equipo";
   const page = Math.max(1, Number(pagina) || 1);
   const supabase = await createClient();
 
-  const { data: roles } = await supabase.from("roles").select("id, key, name").order("created_at");
-  const staffRoles = (roles ?? []).filter((r) => r.key !== "cliente");
+  const [{ data: roles }, kitchens] = await Promise.all([
+    supabase.from("roles").select("id, key, name, kitchen_assignable").order("created_at"),
+    loadKitchens().then((ks) => ks.filter((k) => k.active)),
+  ]);
+  const allStaffRoles = (roles ?? []).filter((r) => r.key !== "cliente");
+  // Columnas de roles: el admin de cocina solo asigna cocinero y domiciliario.
+  const staffRoles = isSuper ? allStaffRoles : allStaffRoles.filter((r) => r.kitchen_assignable);
+  const restrictedRoles = new Set(allStaffRoles.filter((r) => !r.kitchen_assignable).map((r) => r.id));
 
   // Equipo: quien tiene al menos un rol distinto de cliente. El resto son clientes.
-  const { data: staffLinks } = staffRoles.length
-    ? await supabase.from("user_roles").select("user_id").in("role_id", staffRoles.map((r) => r.id))
+  const { data: staffLinks } = allStaffRoles.length
+    ? await supabase.from("user_roles").select("user_id").in("role_id", allStaffRoles.map((r) => r.id))
     : { data: [] as { user_id: string }[] };
   const teamIds = [...new Set((staffLinks ?? []).map((r) => r.user_id))];
 
@@ -59,7 +69,18 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
   if (teamIds.length) clientQuery = clientQuery.not("id", "in", `(${teamIds.join(",")})`);
   if (search) clientQuery = clientQuery.or(search);
 
-  const [{ data: team, count: teamCount }, { data: clients, count: clientCount }] = await Promise.all([teamQuery, clientQuery]);
+  const [{ data: team, count: teamCount }, { data: clients, count: clientCount }, { data: links }] = await Promise.all([
+    teamQuery,
+    isSuper ? clientQuery : Promise.resolve({ data: [], count: 0 }),
+    teamIds.length ? supabase.from("user_kitchens").select("user_id, kitchen_id").in("user_id", teamIds) : Promise.resolve({ data: [] }),
+  ]);
+  const shortName = (id: string) => kitchens.find((k) => k.id === id)?.name.replace(/^Cocina /, "");
+  const kitchensOf = (uid: string) =>
+    (links ?? [])
+      .filter((l) => l.user_id === uid)
+      .map((l) => shortName(l.kitchen_id))
+      .filter(Boolean)
+      .join(", ");
   const people = ((view === "equipo" ? team : clients) ?? []) as unknown as Person[];
   const pages = Math.max(1, Math.ceil((clientCount ?? 0) / PAGE_SIZE));
 
@@ -75,7 +96,11 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
       <PageHeader
         eyebrow="Configuración"
         title="Usuarios"
-        description="El equipo, con sus roles en el sistema, y los clientes, separados. Toca a una persona para ver su ficha completa, activarla o inactivarla."
+        description={
+          isSuper
+            ? "El equipo, con sus roles y cocinas, y los clientes, separados. Toca a una persona para ver su ficha, sus cocinas, activarla o inactivarla."
+            : "El equipo de tu cocina: cocineros y domiciliarios. Toca a una persona para ver su ficha, activarla o inactivarla."
+        }
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -85,7 +110,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
               { key: "equipo", label: "Equipo", icon: ShieldCheck, count: teamCount ?? 0 },
               { key: "clientes", label: "Clientes", icon: ShoppingBag, count: clientCount ?? 0 },
             ] as const
-          ).map((t) => (
+          ).filter((t) => isSuper || t.key === "equipo").map((t) => (
             <Link
               key={t.key}
               href={href({ vista: t.key })}
@@ -113,7 +138,18 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
       </div>
 
       {view === "equipo" ? (
-        <TeamPanel people={people} roles={staffRoles} me={session.userId} term={term} />
+        <div className="space-y-6">
+          {kitchens.length > 0 && <AddTeamMember roles={staffRoles.map((r) => ({ id: r.id, name: r.name }))} kitchens={kitchens.map((k) => ({ id: k.id, name: k.name }))} />}
+          <TeamPanel
+            people={people}
+            roles={staffRoles}
+            me={session.userId}
+            term={term}
+            kitchensOf={kitchensOf}
+            isLocked={(u, role) => (u.id === session.userId && role.key === "admin") || (!isSuper && u.user_roles.some((r) => restrictedRoles.has(r.role_id)))}
+            superIds={new Set((team ?? []).filter((u) => u.user_roles.some((r) => allStaffRoles.find((x) => x.id === r.role_id)?.key === "admin")).map((u) => u.id))}
+          />
+        </div>
       ) : (
         <ClientsPanel people={people} roles={staffRoles} total={clientCount ?? 0} term={term} page={page} pages={pages} href={href} />
       )}
@@ -141,7 +177,24 @@ function PersonCell({ user, me, size = 36 }: { user: Person; me: string; size?: 
 }
 
 /** Equipo: una columna por rol con su interruptor. */
-function TeamPanel({ people, roles, me, term }: { people: Person[]; roles: Role[]; me: string; term: string }) {
+function TeamPanel({
+  people,
+  roles,
+  me,
+  term,
+  kitchensOf,
+  isLocked,
+  superIds,
+}: {
+  people: Person[];
+  roles: Role[];
+  me: string;
+  term: string;
+  kitchensOf: (id: string) => string;
+  isLocked: (u: Person, r: Role) => boolean;
+  superIds: Set<string>;
+}) {
+  const where = (u: Person) => (superIds.has(u.id) ? "Todas las cocinas" : kitchensOf(u.id) || "Sin cocina asignada");
   if (!people.length) {
     return (
       <Panel>
@@ -157,11 +210,12 @@ function TeamPanel({ people, roles, me, term }: { people: Person[]; roles: Role[
           return (
             <li key={user.id} className="px-5 py-4">
               <PersonCell user={user} me={me} size={40} />
+              <p className={cn("mt-1.5 text-xs", where(user) === "Sin cocina asignada" ? "font-semibold text-amber-700" : "text-[#1B1B1B]/50")}>{where(user)}</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {roles.map((role) => (
                   <label key={role.id} className="flex items-center justify-between gap-2 rounded-xl bg-[#F8F7F2] px-3 py-2 text-xs font-medium text-[#1B1B1B]/70">
                     <span className="truncate">{role.name}</span>
-                    <UserRoleToggle userId={user.id} roleId={role.id} roleName={role.name} checked={assigned.has(role.id)} locked={user.id === me && role.key === "admin"} />
+                    <UserRoleToggle userId={user.id} roleId={role.id} roleName={role.name} checked={assigned.has(role.id)} locked={isLocked(user, role)} />
                   </label>
                 ))}
               </div>
@@ -174,6 +228,7 @@ function TeamPanel({ people, roles, me, term }: { people: Person[]; roles: Role[
           <thead>
             <tr className="border-y border-[#1F4D36]/[0.06] bg-[#F8F7F2]/60 text-[11px] font-bold uppercase tracking-wider text-[#1B1B1B]/40">
               <th className="px-6 py-3">Persona</th>
+              <th className="px-3 py-3">Cocinas</th>
               {roles.map((role) => (
                 <th key={role.id} className="px-3 py-3 text-center">
                   {role.name}
@@ -189,9 +244,10 @@ function TeamPanel({ people, roles, me, term }: { people: Person[]; roles: Role[
                   <td className="px-6 py-3.5">
                     <PersonCell user={user} me={me} />
                   </td>
+                  <td className={cn("px-3 py-3.5 text-xs", where(user) === "Sin cocina asignada" ? "font-semibold text-amber-700" : "text-[#1B1B1B]/60")}>{where(user)}</td>
                   {roles.map((role) => (
                     <td key={role.id} className="px-3 py-3.5 text-center">
-                      <UserRoleToggle userId={user.id} roleId={role.id} roleName={role.name} checked={assigned.has(role.id)} locked={user.id === me && role.key === "admin"} />
+                      <UserRoleToggle userId={user.id} roleId={role.id} roleName={role.name} checked={assigned.has(role.id)} locked={isLocked(user, role)} />
                     </td>
                   ))}
                 </tr>

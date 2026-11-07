@@ -117,11 +117,7 @@ export async function saveProduct(input: ProductInput): Promise<ActionState> {
     productId = data.id;
   }
 
-  if (input.kind === "builder") {
-    refreshCatalog();
-    return { ok: input.id ? `“${name}” actualizado.` : `“${name}” creado.` };
-  }
-
+  // Receta: ingredientes y empaques (en los productos armables, solo los empaques).
   const { error: delError } = await supabase.from("recipe_items").delete().eq("product_id", productId);
   if (delError) return { error: delError.message };
   if (recipe.length) {

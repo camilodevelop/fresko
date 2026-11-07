@@ -9,6 +9,7 @@ begin
       ('admin@fresko.test',        'Admin FRESKO',       'admin'),
       ('cocina@fresko.test',       'Cocinero FRESKO',    'cocinero'),
       ('domicilios@fresko.test',   'Domiciliario FRESKO','domiciliario'),
+      ('admin.fontibon@fresko.test', 'Admin Fontibón',   'admin_cocina'),
       ('cliente@fresko.test',      'Cliente Demo',       null)
     ) t(email, full_name, role_key)
   loop
@@ -55,3 +56,9 @@ select p.id, d.document, '2026-11-05', d.document <> 'comunicaciones', 'registro
 from public.profiles p
 cross join (values ('terminos'), ('privacidad'), ('comunicaciones')) as d(document)
 where p.email like '%@fresko.test';
+
+-- El administrador de cocina de prueba solo ve Cocina Fontibón.
+insert into public.user_kitchens (user_id, kitchen_id)
+select p.id, k.id from public.profiles p, public.kitchens k
+where p.email = 'admin.fontibon@fresko.test' and k.name = 'Cocina Fontibón'
+on conflict do nothing;

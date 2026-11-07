@@ -24,6 +24,8 @@ import {
   Truck,
   UserRound,
   Users,
+  Wallet,
+  Gauge,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -48,6 +50,8 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   boxes: Boxes,
   sliders: SlidersHorizontal,
   alert: AlertTriangle,
+  wallet: Wallet,
+  gauge: Gauge,
 };
 
 export type SidebarUser = {

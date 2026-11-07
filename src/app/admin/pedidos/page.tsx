@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { CalendarDays, ChefHat, ClipboardList, Package, Search, Truck, Wallet } from "lucide-react";
+import { CalendarDays, ChefHat, ClipboardList, Package, Truck, Wallet } from "lucide-react";
 import { EmptyState, PageHeader, Panel, StatCard, StatusBadge } from "@/components/dashboard/ui";
+import { OrderFilters } from "@/components/admin-orders/OrderFilters";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { todayBogota } from "@/lib/account";
 import { ORDER_STATUS, formatDeliveryDate } from "@/lib/delivery";
@@ -33,13 +34,17 @@ export default async function AdminPedidosPage({
     .order("created_at", { ascending: false })
     .limit(200);
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) query = query.eq("delivery_date", fecha);
+  // Buscar por código (más de 3 caracteres) busca en todas las fechas; si no, filtra por fecha y vista.
+  const term = q.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
+  // Fecha que muestra el selector: la elegida o, en "Para hoy", la de hoy.
+  const shownDate = validDate ? fecha : vista === "hoy" ? today : "";
+  if (term.length > 3) query = query.ilike("code", `%${term}%`);
+  else if (validDate) query = query.eq("delivery_date", fecha);
   else if (vista === "hoy") query = query.eq("delivery_date", today).neq("status", "pendiente_pago");
   else if (vista === "proximos") query = query.gt("delivery_date", today).neq("status", "pendiente_pago");
   else if (vista === "pendientes") query = query.eq("status", "pendiente_pago");
   if (estado && ORDER_STATUS[estado]) query = query.eq("status", estado);
-  const term = q.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
-  if (term) query = query.ilike("code", `%${term}%`);
 
   const [{ data: orders }, { data: todayOrders }] = await Promise.all([
     query,
@@ -74,29 +79,7 @@ export default async function AdminPedidosPage({
         bodyClassName="p-0"
         title={`${orders?.length ?? 0} pedidos`}
         actions={
-          <form className="flex w-full flex-wrap items-center gap-2 sm:w-auto" action="/admin/pedidos">
-            <input type="hidden" name="vista" value={vista} />
-            <div className="relative w-full sm:w-auto">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#1B1B1B]/35" />
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="FR-1001"
-                aria-label="Buscar por número"
-                className="h-9 w-full rounded-full border sm:w-32 border-[#1F4D36]/12 bg-[#F8F7F2] pl-9 pr-3 text-sm outline-none focus:border-[#8BC34A] focus:bg-white"
-              />
-            </div>
-            <input
-              type="date"
-              name="fecha"
-              defaultValue={fecha}
-              aria-label="Fecha de entrega"
-              className="h-9 min-w-0 flex-1 rounded-full border sm:flex-none border-[#1F4D36]/12 bg-[#F8F7F2] px-3 text-sm"
-            />
-            <button type="submit" className="h-9 rounded-full bg-[#1F4D36] px-4 text-xs font-semibold text-white">
-              Filtrar
-            </button>
-          </form>
+          <OrderFilters q={q} fecha={term.length > 3 ? "" : shownDate} />
         }
       >
         <div className="mt-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-6 [&::-webkit-scrollbar]:hidden">
@@ -177,9 +160,9 @@ export default async function AdminPedidosPage({
                   const addr = o.address_snapshot as { address: string };
                   const items = o.order_items.reduce((s, i) => s + i.quantity, 0);
                   return (
-                    <tr key={o.id} className="border-b border-[#1F4D36]/[0.05] last:border-0 hover:bg-[#F8F7F2]/60">
+                    <tr key={o.id} className="relative cursor-pointer border-b border-[#1F4D36]/[0.05] last:border-0 hover:bg-[#F8F7F2]/60">
                       <td className="px-6 py-3">
-                        <Link href={`/admin/pedidos/${o.code}`} className="font-semibold text-[#1F4D36] hover:underline">
+                        <Link href={`/admin/pedidos/${o.code}`} className="font-semibold text-[#1F4D36] after:absolute after:inset-0 hover:underline">
                           {o.code}
                         </Link>
                         <div className="mt-0.5">
