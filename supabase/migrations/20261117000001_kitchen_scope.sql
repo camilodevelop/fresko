@@ -123,6 +123,16 @@ where x.kitchen_id is not null
                   where u2.user_id = x.user_id and p2.permission_key = 'kitchens.all')
 on conflict do nothing;
 
+-- Con una sola cocina, todo el personal queda en ella.
+insert into public.user_kitchens (user_id, kitchen_id)
+select distinct ur.user_id, (select id from public.kitchens limit 1)
+from public.user_roles ur
+join public.role_permissions rp on rp.role_id = ur.role_id and rp.permission_key = 'admin.access'
+where (select count(*) from public.kitchens) = 1
+  and not exists (select 1 from public.user_roles u2 join public.role_permissions p2 on p2.role_id = u2.role_id
+                  where u2.user_id = ur.user_id and p2.permission_key = 'kitchens.all')
+on conflict do nothing;
+
 -- ===== Pedidos: cocina que los atiende (por la zona) =====
 alter table public.orders add column if not exists kitchen_id uuid references public.kitchens (id) on delete set null;
 update public.orders o set kitchen_id = z.kitchen_id from public.zones z where z.id = o.zone_id and o.kitchen_id is distinct from z.kitchen_id;
@@ -399,9 +409,13 @@ create policy "kitchen stock read" on public.kitchen_stock for select
   using ((public.has_permission('inventory.view') or public.has_permission('inventory.manage') or public.has_permission('kitchen.prepare')
           or public.has_permission('reports.view')) and public.can_kitchen(kitchen_id));
 
--- Stock actual → Cocina Fontibón (decisión del dueño); las demás arrancan en cero.
+-- Stock actual → Cocina Fontibón (decisión del dueño) o, si no existe, la primera cocina creada;
+-- las demás arrancan en cero.
+create temp table _stock_kitchen on commit drop as
+select coalesce((select id from public.kitchens where name = 'Cocina Fontibón' limit 1),
+                (select id from public.kitchens order by created_at, name limit 1)) as id;
 insert into public.kitchen_stock (kitchen_id, ingredient_id, stock, min_stock, cost_per_unit)
-select k.id, i.id, case when k.name = 'Cocina Fontibón' then i.stock else 0 end, i.min_stock, i.cost_per_unit
+select k.id, i.id, case when k.id = (select id from _stock_kitchen) then i.stock else 0 end, i.min_stock, i.cost_per_unit
 from public.kitchens k cross join public.ingredients i
 on conflict do nothing;
 
@@ -409,7 +423,7 @@ alter table public.inventory_movements add column if not exists kitchen_id uuid 
 alter table public.inventory_movements add column if not exists transfer_id uuid;
 alter table public.inventory_movements add column if not exists counterpart_kitchen_id uuid references public.kitchens (id) on delete set null;
 update public.inventory_movements m set kitchen_id = b.kitchen_id from public.prep_batches b where b.id = m.batch_id and m.kitchen_id is null;
-update public.inventory_movements set kitchen_id = (select id from public.kitchens where name = 'Cocina Fontibón' limit 1) where kitchen_id is null;
+update public.inventory_movements set kitchen_id = (select id from _stock_kitchen) where kitchen_id is null;
 alter table public.inventory_movements alter column kitchen_id set not null;
 create index if not exists inventory_movements_kitchen_idx on public.inventory_movements (kitchen_id, created_at desc);
 
