@@ -13,6 +13,8 @@ export default async function CuentaLayout({ children }: { children: React.React
   const session = await requireConsentedSession("/cuenta");
   // El personal no es cliente: va directo a su panel.
   if (session.isStaff) redirect("/admin");
+  // La cuenta de la pantalla de autoservicio solo abre el autoservicio.
+  if (session.permissions.has("counter.kiosk")) redirect("/autoservicio");
 
   const notifications = await getNotifications(session.userId);
 

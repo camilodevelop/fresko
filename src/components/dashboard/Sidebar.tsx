@@ -26,6 +26,8 @@ import {
   Users,
   Wallet,
   Gauge,
+  Store,
+  ShoppingBag,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -52,6 +54,9 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   alert: AlertTriangle,
   wallet: Wallet,
   gauge: Gauge,
+  store: Store,
+  bag: ShoppingBag,
+  pin: MapPin,
 };
 
 export type SidebarUser = {

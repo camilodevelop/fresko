@@ -39,6 +39,8 @@ export type BoardItem = {
   options: string[];
   /** Unidades de esta línea con una novedad de cocina abierta (faltantes por preparar). */
   shortage: number;
+  /** Nota para cocina (pedidos de mostrador). */
+  note?: string;
 };
 
 export type BoardGroup = {
@@ -71,8 +73,15 @@ export type BoardBatch = {
   items: BoardItem[];
 };
 
+/** Pestaña de los pedidos de mostrador en cocina (no tienen franja). */
+export const COUNTER_SLOT = "mostrador";
+
 export type BoardSlot = {
   slotId: string;
+  /** Pedidos de mostrador: el cliente está esperando en la cocina. */
+  counter?: boolean;
+  /** Carga de un punto de venta (se prepara sin pedidos). */
+  point?: boolean;
   label: string;
   zoneName: string;
   pending: BoardGroup[];
@@ -97,26 +106,32 @@ type ItemRow = {
 export async function loadKitchenBoard(kitchenId: string, date: string) {
   const supabase = await createClient();
   const slots = await loadKitchenSlots(kitchenId);
-  const [{ data: orders }, { data: batches }, { data: stats }] = await Promise.all([
+  const [{ data: orders }, { data: batches }, { data: stats }, { data: loads }] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, code, slot_id, status, prepared_at, on_hold, zones!inner(kitchen_id), order_items(id, name, quantity, prepared_qty, options, product_id, prepared_at, products(image_url, kind))")
-      .eq("zones.kitchen_id", kitchenId)
+      .select("id, code, slot_id, channel, notes, status, prepared_at, on_hold, order_items(id, name, quantity, prepared_qty, options, product_id, prepared_at, products(image_url, kind))")
+      .eq("kitchen_id", kitchenId)
       .eq("delivery_date", date)
       .in("status", ["confirmado", "en_preparacion", "en_camino", "entregado"]),
     supabase
       .from("prep_batches")
-      .select("id, slot_id, product_id, name, kind, quantity, status, started_at, finished_at, duration_seconds, started_by, prep_batch_items(order_item_id, quantity)")
+      .select("id, slot_id, load_id, product_id, name, kind, quantity, status, started_at, finished_at, duration_seconds, started_by, prep_batch_items(order_item_id, quantity)")
       .eq("kitchen_id", kitchenId)
       .eq("delivery_date", date)
       .neq("status", "cancelado")
       .order("started_at"),
     supabase.from("prep_stats").select("product_id, kind, seconds_per_unit"),
+    supabase
+      .from("point_loads")
+      .select("id, status, sale_points(name), point_load_items(product_id, to_produce, produced, products(name, image_url))")
+      .eq("kitchen_id", kitchenId)
+      .eq("load_date", date)
+      .in("status", ["en_produccion", "despachada", "en_venta", "cerrada"]),
   ]);
 
   // Recetas de los productos del día y de las opciones del armador.
   const items = (orders ?? []).flatMap((o) =>
-    (o.order_items as unknown as ItemRow[]).map((i) => ({ ...i, orderCode: o.code, slotId: o.slot_id, orderStatus: o.status, onHold: o.on_hold }))
+    (o.order_items as unknown as ItemRow[]).map((i) => ({ ...i, orderCode: o.code, slotId: o.slot_id ?? COUNTER_SLOT, orderStatus: o.status, onHold: o.on_hold, note: o.channel === "mostrador" ? o.notes : "" }))
   );
   const itemOf = new Map(items.map((i) => [i.id, i]));
   const cookIds = [...new Set((batches ?? []).map((b) => b.started_by).filter((x): x is string => Boolean(x)))];
@@ -133,7 +148,9 @@ export async function loadKitchenBoard(kitchenId: string, date: string) {
     : { data: [] as { order_item_id: string | null; quantity: number | null }[] };
   const shortageOf = new Map<string, number>();
   for (const n of openIncidents ?? []) if (n.order_item_id) shortageOf.set(n.order_item_id, (shortageOf.get(n.order_item_id) ?? 0) + (n.quantity ?? 0));
-  const productIds = [...new Set(items.map((i) => i.product_id).filter((x): x is string => Boolean(x)))];
+  const productIds = [
+    ...new Set([...items.map((i) => i.product_id), ...(loads ?? []).flatMap((l) => l.point_load_items.map((x) => x.product_id))].filter((x): x is string => Boolean(x))),
+  ];
   const optionIds = [...new Set(items.flatMap((i) => (Array.isArray(i.options) ? i.options.map((o) => o.id) : [])))];
   const [{ data: recipes }, { data: options }] = await Promise.all([
     productIds.length
@@ -161,6 +178,7 @@ export async function loadKitchenBoard(kitchenId: string, date: string) {
   const scale = (lines: RecipeLine[], times: number) => lines.map((l) => ({ ...l, quantity: l.quantity * times }));
   const statOf = new Map((stats ?? []).map((s) => [`${s.kind}:${s.product_id}`, s.seconds_per_unit]));
   const imageOf = new Map(items.filter((i) => i.product_id).map((i) => [i.product_id as string, i.products?.image_url ?? null]));
+  for (const l of loads ?? []) for (const x of l.point_load_items) if (!imageOf.has(x.product_id)) imageOf.set(x.product_id, x.products?.image_url ?? null);
 
   const toBoardItem = (i: (typeof items)[number], quantity: number): BoardItem => ({
     orderItemId: i.id,
@@ -168,11 +186,20 @@ export async function loadKitchenBoard(kitchenId: string, date: string) {
     quantity,
     options: Array.isArray(i.options) ? i.options.map((o) => o.name) : [],
     shortage: shortageOf.get(i.id) ?? 0,
+    note: i.note || undefined,
   });
   // Unidades de la línea que faltan por preparar (ni listas ni en una tanda en curso).
   const pendingQty = (i: (typeof items)[number]) => Math.max(0, i.quantity - i.prepared_qty - (inProgress.get(i.id) ?? 0));
 
-  const result: BoardSlot[] = slots.map((slot) => {
+  // Mostrador primero: solo aparece si hoy hay pedidos o tandas de mostrador.
+  const hasCounter = items.some((i) => i.slotId === COUNTER_SLOT) || (batches ?? []).some((b) => !b.slot_id && !b.load_id);
+  const batchSlot = (b: { slot_id: string | null; load_id: string | null }) => (b.load_id ? `punto:${b.load_id}` : (b.slot_id ?? COUNTER_SLOT));
+  const allSlots = [
+    ...(hasCounter ? [{ id: COUNTER_SLOT, start: "", end: "", zoneName: "Mostrador", counter: true, point: false }] : []),
+    ...slots.map((s) => ({ ...s, counter: false, point: false })),
+    ...(loads ?? []).map((l) => ({ id: `punto:${l.id}`, start: "", end: "", zoneName: l.sale_points?.name ?? "Punto", counter: false, point: true })),
+  ];
+  const result: BoardSlot[] = allSlots.map((slot) => {
     const slotItems = items.filter((i) => i.slotId === slot.id);
     // Los pedidos en espera por una novedad no se preparan hasta que se liberen.
     const pendingItems = slotItems.filter((i) => !i.onHold && (i.orderStatus === "confirmado" || i.orderStatus === "en_preparacion") && pendingQty(i) > 0);
@@ -220,7 +247,56 @@ export async function loadKitchenBoard(kitchenId: string, date: string) {
       ...built,
     ];
 
-    const slotBatches = (batches ?? []).filter((b) => b.slot_id === slot.id);
+    if (slot.point) {
+      const ld = (loads ?? []).find((l) => `punto:${l.id}` === slot.id);
+      const running = (pid: string) =>
+        (batches ?? []).filter((b) => b.load_id === ld?.id && b.product_id === pid && b.status === "en_preparacion").reduce((n, b) => n + b.quantity, 0);
+      const pendingLoad: BoardGroup[] = (ld?.status === "en_produccion" ? ld.point_load_items : [])
+        .map((x) => ({ x, left: x.to_produce - x.produced - running(x.product_id) }))
+        .filter(({ left }) => left > 0)
+        .map(({ x, left }) => ({
+          kind: "lote" as const,
+          key: x.product_id,
+          productId: x.product_id,
+          name: x.products?.name ?? "Plato",
+          image: x.products?.image_url ?? null,
+          quantity: left,
+          orders: 0,
+          items: [],
+          recipe: scale(recipeOf.get(x.product_id) ?? [], left),
+        }))
+        .sort((a, b) => b.quantity - a.quantity);
+      const pb = (batches ?? []).filter((b) => batchSlot(b) === slot.id);
+      const view = (b: (typeof pb)[number]): BoardBatch => ({
+        id: b.id,
+        name: b.name,
+        kind: "lote",
+        quantity: b.quantity,
+        status: b.status,
+        startedAt: b.started_at,
+        finishedAt: b.finished_at,
+        durationSeconds: b.duration_seconds,
+        cook: b.started_by ? (cookOf.get(b.started_by) ?? null) : null,
+        productId: b.product_id,
+        image: b.product_id ? (imageOf.get(b.product_id) ?? null) : null,
+        recipe: scale(recipeOf.get(b.product_id ?? "") ?? [], b.quantity),
+        items: [],
+      });
+      return {
+        slotId: slot.id,
+        point: true,
+        label: slot.zoneName,
+        zoneName: slot.zoneName,
+        pending: pendingLoad,
+        active: pb.filter((b) => b.status === "en_preparacion").map(view),
+        done: pb.filter((b) => b.status === "listo").map(view).reverse(),
+        // Para un punto se cuentan platos (no pedidos).
+        ordersTotal: (ld?.point_load_items ?? []).reduce((n, x) => n + x.to_produce, 0),
+        ordersReady: (ld?.point_load_items ?? []).reduce((n, x) => n + Math.min(x.produced, x.to_produce), 0),
+      };
+    }
+
+    const slotBatches = (batches ?? []).filter((b) => batchSlot(b) === slot.id);
     const batchView = (b: (typeof slotBatches)[number]): BoardBatch => {
       const its = b.prep_batch_items.flatMap((l) => {
         const i = itemOf.get(l.order_item_id);
@@ -247,10 +323,11 @@ export async function loadKitchenBoard(kitchenId: string, date: string) {
       };
     };
 
-    const slotOrders = (orders ?? []).filter((o) => o.slot_id === slot.id && !o.on_hold);
+    const slotOrders = (orders ?? []).filter((o) => (o.slot_id ?? COUNTER_SLOT) === slot.id && !o.on_hold);
     return {
       slotId: slot.id,
-      label: `${slot.start} – ${slot.end}`,
+      counter: slot.counter,
+      label: slot.counter ? "Mostrador" : `${slot.start} – ${slot.end}`,
       zoneName: slot.zoneName,
       pending,
       active: slotBatches.filter((b) => b.status === "en_preparacion").map(batchView),
@@ -485,7 +562,7 @@ export async function countUnrouted(kitchenId: string, date: string) {
   const bySlot: Record<string, number> = {};
   // Sin canasta y sin novedad de cocina abierta (esos no van en canastas hasta prepararse).
   for (const o of orders ?? [])
-    if (!routed.has(o.id) && !o.order_incidents.some((n) => n.stage === "cocina" && !n.resolution)) bySlot[o.slot_id] = (bySlot[o.slot_id] ?? 0) + 1;
+    if (o.slot_id && !routed.has(o.id) && !o.order_incidents.some((n) => n.stage === "cocina" && !n.resolution)) bySlot[o.slot_id] = (bySlot[o.slot_id] ?? 0) + 1;
   return bySlot;
 }
 
@@ -519,11 +596,11 @@ export async function loadIncidents(kitchenId: string | null, date: string): Pro
   let query = supabase
     .from("order_incidents")
     .select(
-      "id, stage, item_name, quantity, reason, note, resolution, photo_path, created_at, created_by, delivery_routes(profiles!delivery_routes_courier_id_fkey(full_name)), orders!inner(id, code, status, contact_name, slot_id, slot_label, delivery_date, zones!inner(kitchen_id, kitchens(name)))"
+      "id, stage, item_name, quantity, reason, note, resolution, photo_path, created_at, created_by, delivery_routes(profiles!delivery_routes_courier_id_fkey(full_name)), orders!inner(id, code, status, contact_name, slot_id, slot_label, delivery_date, kitchen_id, kitchens(name))"
     )
     .eq("orders.delivery_date", date)
     .order("created_at", { ascending: false });
-  if (kitchenId) query = query.eq("orders.zones.kitchen_id", kitchenId);
+  if (kitchenId) query = query.eq("orders.kitchen_id", kitchenId);
   const { data } = await query;
   const rows = (data ?? []) as unknown as {
     id: string;
@@ -537,7 +614,7 @@ export async function loadIncidents(kitchenId: string | null, date: string): Pro
     resolution: string | null;
     created_at: string;
     created_by: string | null;
-    orders: { id: string; code: string; status: string; contact_name: string; slot_id: string; slot_label: string; zones: { kitchens: { name: string } | null } | null };
+    orders: { id: string; code: string; status: string; contact_name: string; slot_id: string | null; slot_label: string; kitchens: { name: string } | null };
   }[];
   const authors = [...new Set(rows.map((r) => r.created_by).filter((x): x is string => Boolean(x)))];
   const { data: people } = authors.length ? await supabase.from("profiles").select("id, full_name").in("id", authors) : { data: [] };
@@ -550,9 +627,9 @@ export async function loadIncidents(kitchenId: string | null, date: string): Pro
     orderId: r.orders.id,
     code: r.orders.code,
     customer: r.orders.contact_name,
-    slotLabel: r.orders.slot_label,
-    slotId: r.orders.slot_id,
-    kitchenName: r.orders.zones?.kitchens?.name ?? null,
+    slotLabel: r.orders.slot_id ? r.orders.slot_label : "Mostrador",
+    slotId: r.orders.slot_id ?? COUNTER_SLOT,
+    kitchenName: r.orders.kitchens?.name ?? null,
     stage: r.stage,
     itemName: r.item_name,
     quantity: r.quantity,
@@ -634,7 +711,10 @@ export async function loadLateOrders(kitchenId: string, date: string): Promise<R
   const roadSeconds = (m: number) => (m / (22 / 3.6)) * factor;
   const endOf = new Map((slotRows ?? []).map((x) => [x.id, new Date(`${date}T${x.end_time.slice(0, 8)}-05:00`).getTime() - SAFETY_SECONDS * 1000]));
   // Pedidos nuevos sin canasta (los que tienen novedad de cocina abierta no se pueden agregar).
-  const late = (orders ?? []).filter((o) => o.route_stops.length === 0 && !o.order_incidents.some((n) => n.stage === "cocina" && !n.resolution));
+  // Solo domicilio (con franja y zona): el mostrador no lleva canasta.
+  const late = (orders ?? [])
+    .filter((o) => o.slot_id && o.zone_id && o.route_stops.length === 0 && !o.order_incidents.some((n) => n.stage === "cocina" && !n.resolution))
+    .map((o) => ({ ...o, slot_id: o.slot_id as string, zone_id: o.zone_id as string }));
   if (late.length === 0) return {};
 
   type RouteRow = {

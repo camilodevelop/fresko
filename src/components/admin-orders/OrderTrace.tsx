@@ -52,12 +52,24 @@ export async function OrderTrace({
   order,
   showMoney,
 }: {
-  order: { id: string; code: string; kind: string; total: number; paid_at: string | null; status: string; delivered_at: string | null; created_at: string; payment_status: string };
+  order: {
+    id: string;
+    code: string;
+    kind: string;
+    total: number;
+    paid_at: string | null;
+    status: string;
+    delivered_at: string | null;
+    created_at: string;
+    payment_status: string;
+    channel: string;
+    source: string;
+  };
   showMoney: boolean;
 }) {
   const supabase = await createClient();
   const [{ data: row }, { data: items }, { data: stop }, { data: cost }, { data: incidents }, { data: pays }] = await Promise.all([
-    supabase.from("orders").select("prepared_at, packed_at, packed_by, delivered_by, tax_amount, tax_name, delivery_photo_path").eq("id", order.id).single(),
+    supabase.from("orders").select("prepared_at, packed_at, packed_by, delivered_by, created_by, tax_amount, tax_name, delivery_photo_path").eq("id", order.id).single(),
     supabase
       .from("order_items")
       .select("id, name, quantity, prepared_qty, options, prep_batch_items(quantity, prep_batches(name, kind, status, started_at, finished_at, duration_seconds, started_by))")
@@ -69,7 +81,7 @@ export async function OrderTrace({
       .maybeSingle(),
     supabase.from("order_food_costs").select("food_cost").eq("order_id", order.id).maybeSingle(),
     supabase.from("order_incidents").select("stage, reason, note, item_name, quantity, resolution, photo_path, created_at, created_by").eq("order_id", order.id).order("created_at"),
-    supabase.from("payments").select("status, reference, provider, created_at").eq("order_id", order.id).order("created_at"),
+    supabase.from("payments").select("status, reference, provider, created_at, created_by, method_name, received_amount, change_amount").eq("order_id", order.id).order("created_at"),
   ]);
   type Item = {
     id: string;
@@ -94,7 +106,7 @@ export async function OrderTrace({
 
   const ids = [
     ...new Set(
-      [row?.packed_by, row?.delivered_by, route?.courier_id, ...(incidents ?? []).map((n) => n.created_by), ...list.flatMap((i) => i.prep_batch_items.map((l) => l.prep_batches?.started_by))].filter(
+      [row?.packed_by, row?.delivered_by, row?.created_by, ...(pays ?? []).map((p) => p.created_by), route?.courier_id, ...(incidents ?? []).map((n) => n.created_by), ...list.flatMap((i) => i.prep_batch_items.map((l) => l.prep_batches?.started_by))].filter(
         (x): x is string => Boolean(x)
       )
     ),
@@ -114,6 +126,9 @@ export async function OrderTrace({
   const units = list.reduce((s, i) => s + i.quantity, 0);
   const preparedUnits = list.reduce((s, i) => s + Math.min(i.quantity, i.prepared_qty), 0);
   const approved = (pays ?? []).find((p) => p.status === "aprobado");
+  const refund = (pays ?? []).find((p) => p.status === "reembolsado");
+  const counter = order.channel !== "domicilio";
+  const point = order.channel === "punto";
   const tax = row?.tax_amount ?? 0;
   const foodCost = Number(cost?.food_cost ?? 0);
   const net = order.total - tax;
@@ -140,16 +155,39 @@ export async function OrderTrace({
     ) : null;
 
   return (
-    <Panel icon={Clock} title="Recorrido del pedido" description="Compra, cocina, alistamiento y domicilio: cada paso con su hora y responsable.">
+    <Panel
+      icon={Clock}
+      title="Recorrido del pedido"
+      description={
+        point
+          ? "Venta en un punto: plato preparado antes en la cocina y vendido por el vendedor."
+          : counter
+            ? "Venta en mostrador: cobro, cocina y entrega, cada paso con su hora y responsable."
+            : "Compra, cocina, alistamiento y domicilio: cada paso con su hora y responsable."
+      }
+    >
       <div className="relative mt-4 space-y-6 before:absolute before:bottom-2 before:left-[17px] before:top-2 before:w-px before:bg-[#1F4D36]/10">
         {/* 1. Compra */}
         <Stage
           icon={ShoppingBag}
-          title="Compra"
+          title={point ? "Venta en el punto" : counter ? "Compra en mostrador" : "Compra"}
           done={Boolean(order.paid_at)}
-          status={order.kind === "suscripcion" ? "Entrega de un plan" : order.paid_at ? "Pagado" : "Sin pagar"}
+          bad={Boolean(refund)}
+          status={refund ? "Devuelto" : order.kind === "suscripcion" ? "Entrega de un plan" : order.paid_at ? "Pagado" : "Sin pagar"}
           lines={[
             { label: "Pedido creado", value: when(order.created_at) },
+            {
+              label: "Origen",
+              value: point ? `Vendedor · ${who(row?.created_by) ?? ""}` : counter ? (order.source === "autoservicio" ? "Pantalla de autoservicio" : `Caja · ${who(row?.created_by) ?? ""}`) : null,
+            },
+            { label: "Cobró", value: counter && approved ? who(approved.created_by) : null },
+            { label: "Método", value: approved?.method_name ?? null },
+            {
+              label: "Recibido",
+              value: approved?.received_amount && approved.change_amount ? `${formatPrice(approved.received_amount)} · vuelto ${formatPrice(approved.change_amount)}` : null,
+              tone: "muted",
+            },
+            { label: "Devolución", value: refund ? `${when(refund.created_at)} · ${who(refund.created_by)}` : null, tone: "bad" },
             { label: order.kind === "suscripcion" ? "Cobrado en el plan" : "Pago", value: order.kind === "suscripcion" ? "Sí" : when(order.paid_at) ?? "Pendiente" },
             { label: "Referencia", value: approved ? `${approved.reference} · ${approved.provider}` : null, tone: "muted" },
             { label: order.kind === "suscripcion" ? "Valor en el plan" : "Valor", value: formatPrice(order.total) },
@@ -195,7 +233,8 @@ export async function OrderTrace({
           {incidentNotes("cocina")}
         </Stage>
 
-        {/* 3. Alistamiento */}
+        {/* 3. Alistamiento (solo domicilio) */}
+        {!counter && (
         <Stage
           icon={Package}
           title="Alistamiento"
@@ -211,8 +250,31 @@ export async function OrderTrace({
         >
           {incidentNotes("alistamiento")}
         </Stage>
+        )}
+
+        {/* 4. Entrega en mostrador */}
+        {counter && (
+          <Stage
+            icon={CheckCircle2}
+            title={point ? "Entregado en el punto" : "Entrega en mostrador"}
+            done={delivered}
+            bad={order.status === "cancelado"}
+            status={delivered ? `Entregado · ${when(order.delivered_at)}` : order.status === "cancelado" ? "Cancelado" : row?.prepared_at ? "Listo, por entregar" : "En espera"}
+            lines={[
+              { label: "Entregado por", value: delivered ? who(row?.delivered_by) : null },
+              {
+                label: "Desde el pago",
+                value: (() => {
+                  const m = mins(order.paid_at, order.delivered_at);
+                  return m == null ? null : `${m} min`;
+                })(),
+              },
+            ]}
+          />
+        )}
 
         {/* 4. Domicilio */}
+        {!counter && (
         <Stage
           icon={failed ? PackageX : delivered ? CheckCircle2 : Truck}
           title="Domicilio"
@@ -243,9 +305,10 @@ export async function OrderTrace({
           )}
           {incidentNotes("entrega")}
         </Stage>
+        )}
       </div>
 
-      {showMoney && (order.paid_at || order.kind === "suscripcion") && (
+      {showMoney && (order.paid_at || order.kind === "suscripcion") && !refund && (
         <dl className="mt-6 grid grid-cols-2 gap-2 rounded-2xl bg-[#F8F7F2] p-3 text-sm sm:grid-cols-4">
           <div>
             <dt className="flex items-center gap-1 text-[11px] text-[#1B1B1B]/50">

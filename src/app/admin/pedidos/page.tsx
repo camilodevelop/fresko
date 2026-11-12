@@ -19,16 +19,16 @@ const VIEWS = [
 export default async function AdminPedidosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vista?: string; estado?: string; fecha?: string; q?: string }>;
+  searchParams: Promise<{ vista?: string; estado?: string; fecha?: string; q?: string; canal?: string }>;
 }) {
   await requirePermission("orders.view");
-  const { vista = "hoy", estado = "", fecha = "", q = "" } = await searchParams;
+  const { vista = "hoy", estado = "", fecha = "", q = "", canal = "" } = await searchParams;
   const supabase = await createClient();
   const today = todayBogota();
 
   let query = supabase
     .from("orders")
-    .select("id, code, kind, status, payment_status, total, delivery_date, slot_label, created_at, contact_name, address_snapshot, zones(name), order_items(quantity)")
+    .select("id, code, kind, channel, source, status, payment_status, total, delivery_date, slot_label, created_at, contact_name, address_snapshot, zones(name), kitchens(name), sale_points(name), order_items(quantity)")
     .order("delivery_date", { ascending: vista !== "todos" })
     .order("slot_label")
     .order("created_at", { ascending: false })
@@ -45,6 +45,7 @@ export default async function AdminPedidosPage({
   else if (vista === "proximos") query = query.gt("delivery_date", today).neq("status", "pendiente_pago");
   else if (vista === "pendientes") query = query.eq("status", "pendiente_pago");
   if (estado && ORDER_STATUS[estado]) query = query.eq("status", estado);
+  if (canal === "domicilio" || canal === "mostrador" || canal === "punto") query = query.eq("channel", canal);
 
   const [{ data: orders }, { data: todayOrders }] = await Promise.all([
     query,
@@ -55,7 +56,7 @@ export default async function AdminPedidosPage({
   const sales = t.reduce((sum, o) => sum + o.total, 0);
 
   const link = (patch: Record<string, string>) => {
-    const params = new URLSearchParams({ vista, ...(estado && { estado }), ...(fecha && { fecha }), ...(q && { q }), ...patch });
+    const params = new URLSearchParams({ vista, ...(estado && { estado }), ...(fecha && { fecha }), ...(q && { q }), ...(canal && { canal }), ...patch });
     for (const [k, v] of [...params.entries()]) if (!v) params.delete(k);
     return `/admin/pedidos?${params.toString()}`;
   };
@@ -108,6 +109,23 @@ export default async function AdminPedidosPage({
               {ORDER_STATUS[s].label}
             </Link>
           ))}
+          <span className="mx-1 w-px shrink-0 bg-[#1F4D36]/10" />
+          {[
+            ["domicilio", "Domicilio"],
+            ["mostrador", "Mostrador"],
+            ["punto", "Puntos"],
+          ].map(([c, label]) => (
+            <Link
+              key={c}
+              href={link({ canal: canal === c ? "" : c })}
+              className={cn(
+                "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold",
+                canal === c ? "bg-[#E8F3DC] text-[#1F4D36] ring-1 ring-[#8BC34A]" : "text-[#1B1B1B]/45 hover:text-[#1F4D36]"
+              )}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
 
         {orders && orders.length > 0 ? (
@@ -115,7 +133,9 @@ export default async function AdminPedidosPage({
           {/* Móvil: tarjetas */}
           <ul className="mt-4 divide-y divide-[#1F4D36]/[0.06] border-t border-[#1F4D36]/[0.06] md:hidden">
             {orders.map((o) => {
-              const addr = o.address_snapshot as { address: string };
+              const counter = o.channel !== "domicilio";
+              const place = o.channel === "punto" ? "Punto de venta" : "Mostrador";
+              const where = o.channel === "punto" ? `Punto · ${o.sale_points?.name ?? ""}` : counter ? `Mostrador · ${o.kitchens?.name ?? ""}` : (o.address_snapshot as { address?: string } | null)?.address ?? "";
               const items = o.order_items.reduce((s, i) => s + i.quantity, 0);
               return (
                 <li key={o.id}>
@@ -128,10 +148,10 @@ export default async function AdminPedidosPage({
                       <span className={cn("font-medium", o.delivery_date === today && "text-[#1F4D36]")}>
                         {o.delivery_date === today ? "Hoy" : formatDeliveryDate(o.delivery_date, { weekday: "short", day: "numeric", month: "short" }, true)}
                       </span>{" "}
-                      · {o.slot_label} · {items} {items === 1 ? "plato" : "platos"}
+                      · {counter ? place : o.slot_label} · {items} {items === 1 ? "plato" : "platos"}
                     </p>
                     <p className="truncate text-xs text-[#1B1B1B]/45">
-                      {o.contact_name || "Sin nombre"} · {addr.address}
+                      {o.contact_name || (counter ? "Consumidor final" : "Sin nombre")} · {where}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <OrderStatusBadge status={o.status} />
@@ -157,7 +177,9 @@ export default async function AdminPedidosPage({
               </thead>
               <tbody>
                 {orders.map((o) => {
-                  const addr = o.address_snapshot as { address: string };
+                  const counter = o.channel !== "domicilio";
+              const place = o.channel === "punto" ? "Punto de venta" : "Mostrador";
+              const where = o.channel === "punto" ? `Punto · ${o.sale_points?.name ?? ""}` : counter ? `Mostrador · ${o.kitchens?.name ?? ""}` : (o.address_snapshot as { address?: string } | null)?.address ?? "";
                   const items = o.order_items.reduce((s, i) => s + i.quantity, 0);
                   return (
                     <tr key={o.id} className="relative cursor-pointer border-b border-[#1F4D36]/[0.05] last:border-0 hover:bg-[#F8F7F2]/60">
@@ -173,13 +195,13 @@ export default async function AdminPedidosPage({
                         <p className={cn("font-medium", o.delivery_date === today ? "text-[#1F4D36]" : "text-[#1B1B1B]/70")}>
                           {o.delivery_date === today ? "Hoy" : formatDeliveryDate(o.delivery_date, { weekday: "short", day: "numeric", month: "short" }, true)}
                         </p>
-                        <p className="text-xs text-[#1B1B1B]/45">{o.slot_label}</p>
+                        <p className="text-xs text-[#1B1B1B]/45">{counter ? (o.channel === "punto" ? "En el punto" : "En mostrador") : o.slot_label}</p>
                       </td>
                       <td className="px-3 py-3">
-                        <p className="font-medium text-[#1B1B1B]/75">{o.contact_name || "Sin nombre"}</p>
-                        <p className="max-w-[220px] truncate text-xs text-[#1B1B1B]/45">{addr.address}</p>
+                        <p className="font-medium text-[#1B1B1B]/75">{o.contact_name || (counter ? "Consumidor final" : "Sin nombre")}</p>
+                        <p className="max-w-[220px] truncate text-xs text-[#1B1B1B]/45">{where}</p>
                       </td>
-                      <td className="px-3 py-3 text-[#1B1B1B]/60">{o.zones?.name}</td>
+                      <td className="px-3 py-3 text-[#1B1B1B]/60">{counter ? <StatusBadge tone={o.channel === "punto" ? "blue" : "amber"} dot={false}>{place}</StatusBadge> : o.zones?.name}</td>
                       <td className="px-3 py-3 text-center font-semibold text-[#1F4D36]">{items}</td>
                       <td className="px-3 py-3">
                         <OrderStatusBadge status={o.status} />

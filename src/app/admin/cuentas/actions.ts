@@ -97,35 +97,3 @@ export async function removePay(userId: string): Promise<Result> {
   refresh();
   return { ok: "Quitado de la nómina." };
 }
-
-// ---------- Impuestos ----------
-
-export async function addTaxRate(input: { name: string; ratePercent: number; validFrom: string }): Promise<Result> {
-  await requirePermission("finance.manage");
-  const name = input.name.trim();
-  if (name.length < 2) return { error: "Escribe el nombre del impuesto." };
-  if (!Number.isFinite(input.ratePercent) || input.ratePercent < 0 || input.ratePercent >= 100) return { error: "El porcentaje debe estar entre 0 y 99,99." };
-  const today = new Date(Date.now() - 5 * 3_600_000).toISOString().slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.validFrom) || input.validFrom < today) {
-    return { error: "La fecha debe ser hoy o futura: los cobros anteriores conservan el impuesto con el que se hicieron." };
-  }
-  const supabase = await createClient();
-  const { error } = await supabase.from("tax_rates").insert({ name, rate: Math.round(input.ratePercent * 100) / 10000, valid_from: input.validFrom });
-  if (error) return { error: error.code === "23505" ? "Ya hay un cambio de impuesto para esa fecha." : "No se pudo guardar." };
-  refresh();
-  return { ok: "Impuesto programado." };
-}
-
-/** Solo se pueden quitar cambios que aún no empiezan a regir. */
-export async function deleteTaxRate(id: string): Promise<Result> {
-  await requirePermission("finance.manage");
-  const supabase = await createClient();
-  const today = new Date(Date.now() - 5 * 3_600_000).toISOString().slice(0, 10);
-  const { data } = await supabase.from("tax_rates").select("valid_from").eq("id", id).maybeSingle();
-  if (!data) return { error: "No encontrado." };
-  if (data.valid_from <= today) return { error: "Ese impuesto ya rige: para cambiarlo, programa uno nuevo desde una fecha." };
-  const { error } = await supabase.from("tax_rates").delete().eq("id", id);
-  if (error) return { error: "No se pudo quitar." };
-  refresh();
-  return { ok: "Cambio de impuesto quitado." };
-}

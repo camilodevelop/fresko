@@ -14,6 +14,9 @@ const ADMIN_GROUPS: { label: string; items: AdminItem[] }[] = [
   {
     label: "Operación",
     items: [
+      { href: "/admin/mostrador", label: "Mostrador", icon: "store", permission: "counter.sell", description: "Venta en la cocina: caja, cobros y entregas." },
+      { href: "/admin/punto", label: "Mi punto", icon: "bag", permission: "points.sell", description: "Recibe tu carga, vende y cierra el día." },
+      { href: "/admin/puntos", label: "Puntos de venta", icon: "pin", permission: "points.manage", description: "Planes de carga, despacho y platos listos." },
       { href: "/admin/pedidos", label: "Pedidos", icon: "package", permission: "orders.view", description: "Pedidos del día, estados y entregas." },
       { href: "/admin/suscripciones", label: "Suscripciones", icon: "repeat", permission: "orders.view", description: "Planes vendidos, platos usados y vigencias." },
       { href: "/admin/cocina", label: "Cocina", icon: "chef", permission: "kitchen.prepare", description: "Producción por franja y plato, tiempos y etiquetas." },
@@ -39,9 +42,9 @@ const ADMIN_GROUPS: { label: string; items: AdminItem[] }[] = [
   {
     label: "Configuración",
     items: [
-      { href: "/admin/ajustes-venta", label: "Ajustes de venta", icon: "sliders", permission: "catalog.manage", description: "Planes y descuentos, armador y precios sugeridos." },
-      { href: "/admin/zonas", label: "Cobertura", icon: "map", permission: "zones.manage", description: "Países, ciudades, zonas y franjas." },
-      { href: "/admin/operacion", label: "Operación", icon: "chef", permission: "zones.manage", description: "Cocinas y domiciliarios por zona y franja." },
+      { href: "/admin/ajustes-venta", label: "Ajustes de venta", icon: "sliders", permission: "catalog.manage", description: "Planes, armador, precios por canal y métodos de pago." },
+      { href: "/admin/zonas", label: "Cobertura", icon: "map", permission: "zones.manage", description: "Dónde entregamos: países, ciudades, zonas, horarios y franjas." },
+      { href: "/admin/operacion", label: "Operación", icon: "chef", permission: ["zones.manage", "points.manage"], description: "Cocinas, domicilios, puntos de venta y platos preparados." },
       { href: "/admin/usuarios", label: "Usuarios", icon: "users", permission: "users.manage", description: "Asigna roles a cada persona." },
       { href: "/admin/roles", label: "Roles y permisos", icon: "shield", permission: "roles.manage", description: "Qué puede hacer cada rol." },
     ],

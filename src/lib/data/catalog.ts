@@ -152,3 +152,36 @@ export async function getPlans(): Promise<{ plans: PublicPlan[]; baseValue: numb
     })),
   };
 }
+
+export type PublicPointMenu = {
+  name: string;
+  address: string;
+  schedule: string;
+  /** Hay una carga recibida y sin cerrar (el vendedor está vendiendo). */
+  selling: boolean;
+  items: (MenuItem & { available: number })[];
+};
+
+/** Página pública del QR de un punto: sus platos (con el precio del punto) y cuántos hay hoy. */
+export async function getPublicPointMenu(code: string): Promise<PublicPointMenu | null> {
+  if (!supabaseConfigured || !/^[a-z0-9]{6,16}$/i.test(code)) return null;
+  const supabase = publicClient();
+  const [{ data }, items, { data: prices }] = await Promise.all([
+    supabase.rpc("public_point_menu", { p_code: code }),
+    getMenuItems(),
+    supabase.from("product_channel_prices").select("price, products(slug)").eq("channel", "punto"),
+  ]);
+  const menu = data as { name: string; address: string; schedule: string; selling: boolean; items: { slug: string; available: number }[] } | null;
+  if (!menu) return null;
+  const priceOf = new Map((prices ?? []).map((p) => [p.products?.slug ?? "", p.price]));
+  return {
+    name: menu.name,
+    address: menu.address,
+    schedule: menu.schedule,
+    selling: menu.selling,
+    items: menu.items.flatMap((x) => {
+      const item = items.find((i) => i.id === x.slug);
+      return item ? [{ ...item, price: priceOf.get(item.id) ?? item.price, available: x.available }] : [];
+    }),
+  };
+}

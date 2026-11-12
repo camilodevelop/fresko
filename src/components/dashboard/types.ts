@@ -14,7 +14,10 @@ export type NavIcon =
   | "sliders"
   | "alert"
   | "wallet"
-  | "gauge";
+  | "gauge"
+  | "store"
+  | "bag"
+  | "pin";
 
 export type NavItem = {
   href: string;

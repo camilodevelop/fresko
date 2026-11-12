@@ -11,6 +11,7 @@ type Result = { ok?: string; error?: string };
 
 function refreshOps() {
   revalidatePath("/admin/cocina");
+  revalidatePath("/admin/puntos");
   revalidatePath("/admin/alistamiento");
   revalidatePath("/admin/rutas");
   revalidatePath("/admin/novedades");
@@ -31,10 +32,19 @@ export async function startBatch(input: {
 }): Promise<Result & { batchId?: string }> {
   await requirePermission("kitchen.prepare");
   const supabase = await createClient();
+  // Pestaña de un punto de venta: tanda de la carga (sin pedidos).
+  if (input.slotId.startsWith("punto:") && input.productId) {
+    const { data, error } = await supabase.rpc("start_load_batch", { p_load_id: input.slotId.slice(6), p_product_id: input.productId });
+    if (error || !data) return { error: dbError(error, "No se pudo iniciar la preparación.") };
+    refreshOps();
+    revalidatePath("/admin/puntos");
+    return { ok: "Preparación iniciada.", batchId: data };
+  }
   const { data, error } = await supabase.rpc("start_prep_batch", {
     p_kitchen_id: input.kitchenId,
     p_date: input.date,
-    p_slot_id: input.slotId,
+    // La pestaña "mostrador" de cocina no tiene franja.
+    p_slot_id: (input.slotId === "mostrador" ? null : input.slotId) as string,
     p_product_id: input.productId as string,
     p_order_item_id: (input.orderItemId ?? null) as string,
   });
@@ -591,7 +601,7 @@ export async function setBasketMax(max: number): Promise<Result> {
     p_max: Math.round(max),
   });
   if (error) return { error: dbError(error, "No se pudo guardar.") };
-  revalidatePath("/admin/operacion");
+  revalidatePath("/admin/operacion", "layout");
   revalidatePath("/admin/alistamiento");
   return { ok: `Máximo por canasta: ${Math.round(max)} pedidos.` };
 }
@@ -604,7 +614,7 @@ export async function setDeliveryWait(minutes: number): Promise<Result> {
     p_minutes: Math.round(minutes),
   });
   if (error) return { error: dbError(error, "No se pudo guardar.") };
-  revalidatePath("/admin/operacion");
+  revalidatePath("/admin/operacion", "layout");
   revalidatePath("/admin/rutas");
   return { ok: `Espera en la entrega: ${Math.round(minutes)} min.` };
 }
@@ -661,7 +671,7 @@ export async function saveKitchen(input: KitchenInput): Promise<Result> {
           ? "Ya existe una cocina con ese nombre."
           : "No se pudo guardar la cocina.",
     };
-  revalidatePath("/admin/operacion");
+  revalidatePath("/admin/operacion", "layout");
   return { ok: input.id ? "Cocina actualizada." : "Cocina creada." };
 }
 
@@ -676,7 +686,7 @@ export async function setZoneKitchen(
     .update({ kitchen_id: kitchenId })
     .eq("id", zoneId);
   if (error) return { error: "No se pudo asignar la cocina." };
-  revalidatePath("/admin/operacion");
+  revalidatePath("/admin/operacion", "layout");
   return { ok: "Zona asignada." };
 }
 
@@ -703,6 +713,6 @@ export async function setCourierAssignment(
       .insert({ user_id: userId, zone_id: zoneId, slot_id: slotId });
     if (error) return { error: "No se pudo asignar." };
   }
-  revalidatePath("/admin/operacion");
+  revalidatePath("/admin/operacion", "layout");
   return { ok: assigned ? "Domiciliario asignado." : "Asignación quitada." };
 }

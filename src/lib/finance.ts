@@ -23,6 +23,12 @@ export type Statement = {
   ordersCount: number;
   plansCount: number;
   salesOrders: number;
+  /** Parte de salesOrders vendida en mostrador. */
+  salesCounter: number;
+  counterCount: number;
+  /** Parte de salesOrders vendida en puntos de venta. */
+  salesPoints: number;
+  pointsCount: number;
   salesPlans: number;
   deliveryFees: number;
   grossSales: number;
@@ -35,6 +41,11 @@ export type Statement = {
   lossInventory: number;
   lossKitchen: number;
   lossOrders: number;
+  /** Platos preparados que no se vendieron: alimentación del equipo, donaciones, pérdidas y faltantes. */
+  lossStaff: number;
+  lossDonation: number;
+  lossDishes: number;
+  lossMissing: number;
   losses: number;
   // Gastos e ingresos
   payroll: number;
@@ -50,6 +61,10 @@ const ZERO: Statement = {
   ordersCount: 0,
   plansCount: 0,
   salesOrders: 0,
+  salesCounter: 0,
+  counterCount: 0,
+  salesPoints: 0,
+  pointsCount: 0,
   salesPlans: 0,
   deliveryFees: 0,
   grossSales: 0,
@@ -61,6 +76,10 @@ const ZERO: Statement = {
   lossInventory: 0,
   lossKitchen: 0,
   lossOrders: 0,
+  lossStaff: 0,
+  lossDonation: 0,
+  lossDishes: 0,
+  lossMissing: 0,
   losses: 0,
   payroll: 0,
   fixedExpenses: 0,
@@ -75,7 +94,7 @@ function finish(s: Statement): Statement {
   const grossSales = s.salesOrders + s.salesPlans;
   const netSales = grossSales - s.taxes;
   const grossProfit = netSales - s.foodCost;
-  const losses = s.lossInventory + s.lossKitchen + s.lossOrders;
+  const losses = s.lossInventory + s.lossKitchen + s.lossOrders + s.lossStaff + s.lossDonation + s.lossDishes + s.lossMissing;
   const expenses = s.payroll + s.fixedExpenses + s.otherExpenses;
   return { ...s, grossSales, netSales, grossProfit, losses, expenses, profit: grossProfit - losses - expenses + s.otherIncome };
 }
@@ -130,12 +149,14 @@ export async function loadFinance(period: Period): Promise<FinanceReport> {
   const fromTs = startOf(period.from);
   const toTs = startOf(addDays(period.to, 1));
 
-  const [orders, planPays, batches, movements, kitchenIncidents, lostOrders, entries, pay, items] = await Promise.all([
+  const [orders, planPays, batches, movements, kitchenIncidents, lostOrders, entries, pay, items, dishOut] = await Promise.all([
     // Pedidos normales cobrados en el período
     supabase
       .from("orders")
-      .select("id, total, delivery_fee, tax_amount, paid_at, zones(kitchen_id)")
+      .select("id, total, delivery_fee, tax_amount, paid_at, kitchen_id, channel")
       .eq("kind", "pedido")
+      // Devueltos en caja (antes de entrar a cocina): no son venta.
+      .neq("payment_status", "reembolsado")
       .gte("paid_at", fromTs)
       .lt("paid_at", toTs),
     // Pagos de planes (compra y diferencias)
@@ -152,7 +173,7 @@ export async function loadFinance(period: Period): Promise<FinanceReport> {
     // Platos dañados en cocina (ya preparados)
     supabase
       .from("order_incidents")
-      .select("cost, item_name, created_at, orders!inner(code, zones(kitchen_id))")
+      .select("cost, item_name, created_at, orders!inner(code, kitchen_id)")
       .eq("stage", "cocina")
       .gt("cost", 0)
       .gte("created_at", fromTs)
@@ -160,7 +181,7 @@ export async function loadFinance(period: Period): Promise<FinanceReport> {
     // Pedidos que no llegaron al cliente (cancelados o no entregados) del período
     supabase
       .from("orders")
-      .select("id, code, status, delivery_date, zones(kitchen_id)")
+      .select("id, code, status, delivery_date, kitchen_id")
       .in("status", ["cancelado", "no_entregado"])
       .gte("delivery_date", period.from)
       .lte("delivery_date", period.to),
@@ -174,6 +195,13 @@ export async function loadFinance(period: Period): Promise<FinanceReport> {
       .eq("orders.kind", "pedido")
       .gte("orders.paid_at", fromTs)
       .lt("orders.paid_at", toTs),
+    // Platos preparados que no se vendieron (puntos y vitrina)
+    supabase
+      .from("dish_movements")
+      .select("kind, quantity, created_at, dish_lots!inner(kitchen_id, unit_cost, products(name))")
+      .in("kind", ["equipo", "donacion", "perdida", "faltante"])
+      .gte("created_at", fromTs)
+      .lt("created_at", toTs),
   ]);
 
   const byKitchen: Record<KitchenKey, Statement> = {};
@@ -189,8 +217,20 @@ export async function loadFinance(period: Period): Promise<FinanceReport> {
   };
 
   // Ventas de pedidos
-  for (const o of (orders.data ?? []) as unknown as { total: number; delivery_fee: number; tax_amount: number; paid_at: string; zones: { kitchen_id: string | null } | null }[]) {
-    bump(o.zones?.kitchen_id, { ordersCount: 1, salesOrders: o.total, deliveryFees: o.delivery_fee, taxes: o.tax_amount });
+  for (const o of orders.data ?? []) {
+    const counter = o.channel === "mostrador";
+    const point = o.channel === "punto";
+    bump(o.kitchen_id, {
+      ordersCount: 1,
+      salesOrders: o.total,
+      salesCounter: counter ? o.total : 0,
+      counterCount: counter ? 1 : 0,
+      salesPoints: point ? o.total : 0,
+      pointsCount: point ? 1 : 0,
+      deliveryFees: o.delivery_fee,
+      taxes: o.tax_amount,
+    });
+    if (!o.paid_at) continue;
     const d = day(bogotaDate(o.paid_at));
     d.netSales += o.total - o.tax_amount;
     d.orders += 1;
@@ -199,11 +239,11 @@ export async function loadFinance(period: Period): Promise<FinanceReport> {
   // Ventas de planes: la cocina es la de la zona de sus entregas.
   const subIds = [...new Set((planPays.data ?? []).map((p) => p.subscription_id))];
   const { data: subOrders } = subIds.length
-    ? await supabase.from("orders").select("subscription_id, created_at, zones(kitchen_id)").in("subscription_id", subIds).order("created_at")
+    ? await supabase.from("orders").select("subscription_id, created_at, kitchen_id").in("subscription_id", subIds).order("created_at")
     : { data: [] };
   const kitchenOfSub = new Map<string, string | null>();
-  for (const o of (subOrders ?? []) as unknown as { subscription_id: string; zones: { kitchen_id: string | null } | null }[]) {
-    if (!kitchenOfSub.has(o.subscription_id)) kitchenOfSub.set(o.subscription_id, o.zones?.kitchen_id ?? null);
+  for (const o of subOrders ?? []) {
+    if (o.subscription_id && !kitchenOfSub.has(o.subscription_id)) kitchenOfSub.set(o.subscription_id, o.kitchen_id ?? null);
   }
   for (const p of planPays.data ?? []) {
     bump(kitchenOfSub.get(p.subscription_id), { plansCount: p.kind === "compra" ? 1 : 0, salesPlans: p.amount, taxes: p.tax_amount });
@@ -225,13 +265,13 @@ export async function loadFinance(period: Period): Promise<FinanceReport> {
     lossDetail.push({ label: `${m.kind === "ajuste" ? "Desfase de conteo" : (REASON[m.reason ?? "otro"] ?? "Pérdida")} · ${m.ingredients?.name ?? ""}`, amount: value, kitchen: m.kitchen_id });
   }
   // Platos dañados en cocina
-  for (const n of (kitchenIncidents.data ?? []) as unknown as { cost: number; item_name: string | null; orders: { code: string; zones: { kitchen_id: string | null } | null } }[]) {
+  for (const n of (kitchenIncidents.data ?? []) as unknown as { cost: number; item_name: string | null; orders: { code: string; kitchen_id: string | null } }[]) {
     // Su costo ya está en lo producido: pasa de costo de ingredientes a pérdida (no se cuenta dos veces).
-    bump(n.orders.zones?.kitchen_id, { lossKitchen: Number(n.cost), foodCost: -Number(n.cost) });
-    lossDetail.push({ label: `Plato dañado en cocina · ${n.item_name ?? ""} (${n.orders.code})`, amount: Number(n.cost), kitchen: n.orders.zones?.kitchen_id ?? "general" });
+    bump(n.orders.kitchen_id, { lossKitchen: Number(n.cost), foodCost: -Number(n.cost) });
+    lossDetail.push({ label: `Plato dañado en cocina · ${n.item_name ?? ""} (${n.orders.code})`, amount: Number(n.cost), kitchen: n.orders.kitchen_id ?? "general" });
   }
   // Comida de pedidos no entregados o cancelados después de prepararse
-  const lost = (lostOrders.data ?? []) as unknown as { id: string; code: string; status: string; zones: { kitchen_id: string | null } | null }[];
+  const lost = lostOrders.data ?? [];
   const { data: lostCosts } = lost.length ? await supabase.from("order_food_costs").select("order_id, food_cost").in("order_id", lost.map((o) => o.id)) : { data: [] };
   const costOf = new Map((lostCosts ?? []).map((c) => [c.order_id, Number(c.food_cost)]));
   // Lo que ya se contó como plato dañado de ese pedido no se vuelve a contar.
@@ -243,8 +283,23 @@ export async function loadFinance(period: Period): Promise<FinanceReport> {
   for (const o of lost) {
     const c = (costOf.get(o.id) ?? 0) - (damagedOf.get(o.id) ?? 0);
     if (c <= 0) continue;
-    bump(o.zones?.kitchen_id, { lossOrders: c, foodCost: -c });
-    lossDetail.push({ label: `${o.status === "no_entregado" ? "No entregado" : "Cancelado ya preparado"} · ${o.code}`, amount: c, kitchen: o.zones?.kitchen_id ?? "general" });
+    bump(o.kitchen_id, { lossOrders: c, foodCost: -c });
+    lossDetail.push({ label: `${o.status === "no_entregado" ? "No entregado" : "Cancelado ya preparado"} · ${o.code}`, amount: c, kitchen: o.kitchen_id ?? "general" });
+  }
+
+  // Platos preparados que no se vendieron: su costo ya está en lo producido, pasa a merma.
+  const DISH: Record<string, { key: "lossStaff" | "lossDonation" | "lossDishes" | "lossMissing"; label: string }> = {
+    equipo: { key: "lossStaff", label: "Alimentación del equipo" },
+    donacion: { key: "lossDonation", label: "Donación" },
+    perdida: { key: "lossDishes", label: "Plato vencido o dañado" },
+    faltante: { key: "lossMissing", label: "Faltante de platos" },
+  };
+  for (const m of (dishOut.data ?? []) as unknown as { kind: string; quantity: number; dish_lots: { kitchen_id: string; unit_cost: number; products: { name: string } | null } }[]) {
+    const value = -m.quantity * Number(m.dish_lots.unit_cost ?? 0);
+    if (!value) continue;
+    const d = DISH[m.kind];
+    bump(m.dish_lots.kitchen_id, { [d.key]: value, foodCost: -value });
+    lossDetail.push({ label: `${d.label} · ${-m.quantity} × ${m.dish_lots.products?.name ?? "plato"}`, amount: value, kitchen: m.dish_lots.kitchen_id });
   }
 
   // Gastos e ingresos manuales (recurrentes prorrateados por día)

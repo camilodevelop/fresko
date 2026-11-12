@@ -9,11 +9,11 @@ export function CuentasTabs({ canManage }: { canManage: boolean }) {
   const path = usePathname();
   const tabs = [
     { href: "/admin/cuentas", label: "Resumen" },
+    { href: "/admin/cuentas/cajas", label: "Cierres de caja" },
     ...(canManage
       ? [
           { href: "/admin/cuentas/gastos", label: "Gastos e ingresos" },
           { href: "/admin/cuentas/nomina", label: "Nómina" },
-          { href: "/admin/cuentas/impuestos", label: "Impuestos" },
         ]
       : []),
   ];

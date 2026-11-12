@@ -13,7 +13,16 @@ import { isCutoutImage } from "@/lib/product-image";
 import { AllergenList, NutritionFacts } from "./NutritionFacts";
 
 /** Detalle del producto: imagen grande, descripción, nutrición y alérgenos. */
-export function ProductDetailModal({ item, onClose }: { item: MenuItem; onClose: () => void }) {
+export function ProductDetailModal({
+  item,
+  onClose,
+  action,
+}: {
+  item: MenuItem;
+  onClose: () => void;
+  /** Reemplaza el botón de agregar al carrito (p. ej. en la página de un punto de venta). */
+  action?: React.ReactNode;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -117,7 +126,9 @@ export function ProductDetailModal({ item, onClose }: { item: MenuItem; onClose:
               <p className="text-[11px] text-[#1B1B1B]/45">{item.builder ? "Desde" : "Precio"}</p>
               <p className="font-display text-2xl font-bold text-[#1F4D36]">{formatPrice(item.price)}</p>
             </div>
-            {item.builder ? (
+            {action ? (
+              action
+            ) : item.builder ? (
               <Button asChild>
                 <Link href={`/arma-tu-bowl?producto=${item.id}`}>Armar el mío</Link>
               </Button>

@@ -23,14 +23,13 @@ export async function GET(request: NextRequest) {
 
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, code, total, tax_amount, paid_at, status, contact_name, zones(kitchen_id)")
+    .select("id, code, total, tax_amount, paid_at, status, contact_name, kitchen_id, channel")
     .eq("kind", "pedido")
+    .neq("payment_status", "reembolsado")
     .gte("paid_at", `${from}T00:00:00-05:00`)
     .lt("paid_at", `${addDays(to, 1)}T00:00:00-05:00`)
     .order("paid_at");
-  const rows = ((orders ?? []) as unknown as { id: string; code: string; total: number; tax_amount: number; paid_at: string; status: string; contact_name: string; zones: { kitchen_id: string | null } | null }[]).filter(
-    (o) => !kitchenId || o.zones?.kitchen_id === kitchenId
-  );
+  const rows = (orders ?? []).filter((o) => !kitchenId || o.kitchen_id === kitchenId);
   const { data: costs } = rows.length ? await supabase.from("order_food_costs").select("order_id, food_cost").in("order_id", rows.map((o) => o.id)) : { data: [] };
   const costOf = new Map((costs ?? []).map((c) => [c.order_id, Number(c.food_cost)]));
 
@@ -43,6 +42,8 @@ export async function GET(request: NextRequest) {
     [],
     ["ESTADO DE RESULTADOS", "Valor"],
     ["Ventas de pedidos", s.salesOrders],
+    ["  de ellas en mostrador", s.salesCounter],
+    ["  de ellas en puntos de venta", s.salesPoints],
     ["Ventas de planes", s.salesPlans],
     ["Ventas cobradas", s.grossSales],
     ["Impuestos incluidos", -s.taxes],
@@ -52,17 +53,21 @@ export async function GET(request: NextRequest) {
     ["Pérdidas de inventario", -s.lossInventory],
     ["Platos dañados en cocina", -s.lossKitchen],
     ["Pedidos no entregados o cancelados", -s.lossOrders],
+    ["Alimentación del equipo (platos sobrantes)", -s.lossStaff],
+    ["Donaciones de platos", -s.lossDonation],
+    ["Platos vencidos o dañados", -s.lossDishes],
+    ["Faltantes de platos", -s.lossMissing],
     ["Nómina", -s.payroll],
     ["Gastos fijos", -s.fixedExpenses],
     ["Otros gastos e imprevistos", -s.otherExpenses],
     ["Otros ingresos", s.otherIncome],
     ["Utilidad real", s.profit],
     [],
-    ["PEDIDOS COBRADOS", "Fecha de pago", "Cocina", "Cliente", "Estado", "Cobrado", "Impuesto", "Venta neta", "Costo comida", "Utilidad bruta"],
+    ["PEDIDOS COBRADOS", "Fecha de pago", "Cocina", "Canal", "Cliente", "Estado", "Cobrado", "Impuesto", "Venta neta", "Costo comida", "Utilidad bruta"],
     ...rows.map((o) => {
       const net = o.total - o.tax_amount;
       const cost = costOf.get(o.id) ?? 0;
-      return [o.code, new Date(o.paid_at).toLocaleString("es-CO", { timeZone: "America/Bogota" }), kname(o.zones?.kitchen_id), o.contact_name, o.status, o.total, o.tax_amount, net, cost, net - cost];
+      return [o.code, new Date(o.paid_at ?? "").toLocaleString("es-CO", { timeZone: "America/Bogota" }), kname(o.kitchen_id), o.channel === "mostrador" ? "Mostrador" : o.channel === "punto" ? "Punto de venta" : "Domicilio", o.contact_name, o.status, o.total, o.tax_amount, net, cost, net - cost];
     }),
     [],
     ["PÉRDIDAS", "Valor"],

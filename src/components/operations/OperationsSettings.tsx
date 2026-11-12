@@ -32,7 +32,10 @@ export function OperationsSettings({
   couriers,
   waitMinutes,
   basketMax,
+  section,
 }: {
+  /** Qué parte mostrar: cocinas (ubicación y zonas que atienden) o domicilios (reparto y domiciliarios). */
+  section: "cocinas" | "domicilios";
   kitchens: KitchenRow[];
   zones: OpsZone[];
   coverage: CoverageZone[];
@@ -54,7 +57,8 @@ export function OperationsSettings({
 
   return (
     <div className="space-y-6">
-      <DeliveryRules wait={waitMinutes} max={basketMax} />
+      {section === "domicilios" && <DeliveryRules wait={waitMinutes} max={basketMax} />}
+      {section === "cocinas" && (
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Panel
           title="Cocinas"
@@ -156,7 +160,9 @@ export function OperationsSettings({
           </Panel>
         )}
       </div>
+      )}
 
+      {section === "domicilios" && (
       <Panel
         title="Domiciliarios"
         icon={Bike}
@@ -198,6 +204,7 @@ export function OperationsSettings({
           </div>
         )}
       </Panel>
+      )}
     </div>
   );
 }

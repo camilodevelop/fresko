@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Percent, Trash2 } from "lucide-react";
-import { addTaxRate, deleteTaxRate } from "@/app/admin/cuentas/actions";
+import { addTaxRate, deleteTaxRate } from "@/app/admin/ajustes-venta/actions";
 import { Panel, StatusBadge } from "@/components/dashboard/ui";
 import { Button } from "@/components/ui/button";
 import { notify } from "@/lib/notify";

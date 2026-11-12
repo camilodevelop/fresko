@@ -21,13 +21,15 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, code, kind, status, payment_status, total, delivered_at, delivery_photo_path, on_hold, order_incidents(stage, item_name, quantity, reason, note, created_at, resolution, photo_path), subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, contact_name, contact_phone, created_at, paid_at, zones(name), subscriptions(code, plan_name), profiles!orders_user_id_fkey(email), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at, profiles(full_name)), payments(id, status, amount, reference, provider, created_at)"
+      "id, code, kind, channel, source, status, payment_status, total, delivered_at, delivery_photo_path, on_hold, order_incidents(stage, item_name, quantity, reason, note, created_at, resolution, photo_path), subtotal, delivery_fee, delivery_date, slot_label, address_snapshot, notes, contact_name, contact_phone, created_at, paid_at, zones(name), kitchens(name), sale_points(name), subscriptions(code, plan_name), profiles!orders_user_id_fkey(email), order_items(id, name, quantity, unit_price, line_total, options), order_events(id, status, note, created_at, profiles(full_name)), payments(id, status, amount, reference, provider, method_name, created_at)"
     )
     .eq("code", code.toUpperCase())
     .maybeSingle();
   if (!order) notFound();
 
-  const addr = order.address_snapshot as { label: string; address: string; details: string; lat: number; lng: number };
+  const addr = order.address_snapshot as { label: string; address: string; details: string; lat: number; lng: number } | null;
+  const counter = order.channel !== "domicilio";
+  const placeName = order.channel === "punto" ? `Punto · ${order.sale_points?.name ?? ""}` : `Mostrador · ${order.kitchens?.name ?? ""}`;
   const fmt = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" });
   const events = [...order.order_events].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const phoneDigits = whatsappDigits(order.contact_phone);
@@ -97,10 +99,12 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
                 <dt className="text-[#1B1B1B]/55">Subtotal</dt>
                 <dd>{formatPrice(order.subtotal)}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-[#1B1B1B]/55">Domicilio</dt>
-                <dd>{order.delivery_fee ? formatPrice(order.delivery_fee) : "Gratis"}</dd>
-              </div>
+              {!counter && (
+                <div className="flex justify-between">
+                  <dt className="text-[#1B1B1B]/55">Domicilio</dt>
+                  <dd>{order.delivery_fee ? formatPrice(order.delivery_fee) : "Gratis"}</dd>
+                </div>
+              )}
               <div className="flex justify-between pt-1 font-display text-lg font-bold text-[#1F4D36]">
                 <dt>Total</dt>
                 <dd>{formatPrice(order.total)}</dd>
@@ -130,23 +134,31 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
         </div>
 
         <div className="space-y-6 lg:sticky lg:top-24">
-          {canManage && (
+          {canManage && !counter && (
             <Panel title="Acciones">
               <OrderStatusActions orderId={order.id} status={order.status} />
             </Panel>
           )}
+          {order.channel === "mostrador" && session.permissions.has("counter.sell") && ["pendiente_pago", "confirmado", "en_preparacion"].includes(order.status) && (
+            <Panel title="Acciones">
+              <Link href="/admin/mostrador" className="text-sm font-semibold text-[#1F4D36] underline">
+                Cobrar, entregar o anular desde Mostrador
+              </Link>
+            </Panel>
+          )}
 
-          <Panel title="Entrega">
+          <Panel title={order.channel === "punto" ? "Venta en punto" : counter ? "Venta en mostrador" : "Entrega"}>
             <div className="space-y-4 text-sm">
               <div className="flex gap-3">
                 <CalendarDays className="h-5 w-5 shrink-0 text-[#1F4D36]" />
                 <div>
                   <p className="font-semibold text-[#1F4D36]">{formatDeliveryDate(order.delivery_date, { weekday: "long", day: "numeric", month: "long" }, true)}</p>
                   <p className="text-[#1B1B1B]/55">
-                    {order.slot_label} · {order.zones?.name}
+                    {counter ? placeName : `${order.slot_label} · ${order.zones?.name}`}
                   </p>
                 </div>
               </div>
+              {addr && (
               <div className="flex gap-3">
                 <MapPin className="h-5 w-5 shrink-0 text-[#1F4D36]" />
                 <div className="min-w-0">
@@ -162,6 +174,7 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
                   </a>
                 </div>
               </div>
+              )}
               {order.notes && (
                 <div className="flex gap-3">
                   <MessageSquareText className="h-5 w-5 shrink-0 text-[#1F4D36]" />
@@ -176,7 +189,7 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
               <p className="flex items-center gap-3">
                 <UserRound className="h-5 w-5 text-[#1F4D36]" />
                 <span>
-                  <span className="block font-semibold text-[#1F4D36]">{order.contact_name || "Sin nombre"}</span>
+                  <span className="block font-semibold text-[#1F4D36]">{order.contact_name || (counter ? "Consumidor final" : "Sin nombre")}</span>
                   <span className="text-[#1B1B1B]/50">{order.profiles?.email}</span>
                 </span>
               </p>
@@ -199,11 +212,11 @@ export default async function AdminPedidoPage({ params }: { params: Promise<{ co
                     <span>
                       <span className="font-semibold text-[#1F4D36]">{p.reference}</span>
                       <span className="block text-[#1B1B1B]/45">
-                        {p.provider} · {fmt.format(new Date(p.created_at))}
+                        {p.method_name ?? p.provider} · {fmt.format(new Date(p.created_at))}
                       </span>
                     </span>
                     <span className={p.status === "aprobado" ? "font-semibold text-[#2E6B1F]" : "font-semibold text-red-600"}>
-                      {p.status === "aprobado" ? "Aprobado" : "Rechazado"}
+                      {p.status === "aprobado" ? "Aprobado" : p.status === "reembolsado" ? `Devuelto ${formatPrice(p.amount)}` : "Rechazado"}
                     </span>
                   </li>
                 ))}

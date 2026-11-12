@@ -5,6 +5,7 @@ import { FinanceFilters } from "@/components/finance/FinanceFilters";
 import { addDays, daysBetween } from "@/lib/finance";
 import { loadKitchens } from "@/lib/operations";
 import { loadProductivity } from "@/lib/productivity";
+import { loadPointResults } from "@/lib/points";
 import { requirePermission } from "@/lib/supabase/auth";
 import { todayBogota } from "@/lib/subscriptions";
 import { cn, formatPrice } from "@/lib/utils";
@@ -44,6 +45,7 @@ export default async function ProductividadPage({ searchParams }: { searchParams
   const kitchens = (await loadKitchens()).filter((k) => k.active);
   const kitchen = kitchens.find((k) => k.id === cocina) ?? null;
   const r = await loadProductivity({ from, to }, kitchen?.id ?? null);
+  const pointResults = await loadPointResults({ from, to }, kitchen?.id ?? null, r.payByUser);
   const kname = (id: string) => kitchens.find((k) => k.id === id)?.name ?? "Cocina";
   const canSeeUsers = session.permissions.has("users.manage");
   const person = (id: string, name: string) =>
@@ -264,6 +266,66 @@ export default async function ProductividadPage({ searchParams }: { searchParams
           </div>
         )}
       </Panel>
+
+      {/* Puntos de venta */}
+      {pointResults.length > 0 && (
+        <Panel
+          icon={Store}
+          title="Puntos de venta"
+          description="Venta real (lo vendido sobre lo recibido), merma (equipo, donación, pérdida y faltantes) y ganancia: ventas netas − costo de lo vendido − merma − transporte − pago del vendedor."
+          bodyClassName="p-0"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-sm">
+              <thead>
+                <tr className="border-y border-[#1F4D36]/[0.06] bg-[#F8F7F2]/60 text-[11px] uppercase tracking-wider text-[#1B1B1B]/40">
+                  <th className="px-6 py-3 text-left font-bold">Punto</th>
+                  <th className={th}>Días</th>
+                  <th className={th}>Recibidos</th>
+                  <th className={th}>Vendidos</th>
+                  <th className={th}>Venta real</th>
+                  <th className={th}>Volvieron</th>
+                  <th className={th}>Merma</th>
+                  <th className={th}>Por hora</th>
+                  <th className={th}>Ventas netas</th>
+                  <th className={th}>Costos</th>
+                  <th className="px-6 py-3 text-right font-bold">Ganancia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pointResults.map((p) => (
+                  <tr key={p.pointId} className="border-b border-[#1F4D36]/[0.05] align-top last:border-0">
+                    <td className="px-6 py-3">
+                      <p className="font-semibold text-[#1F4D36]">{p.name}</p>
+                      {!kitchen && <p className="text-xs text-[#1B1B1B]/45">{kname(p.kitchenId)}</p>}
+                    </td>
+                    <td className={td}>{p.days}</td>
+                    <td className={td}>{p.received}</td>
+                    <td className={td}>{p.sold}</td>
+                    <td className={td}>{pct(p.sellThrough)}</td>
+                    <td className={td}>{p.returned || "—"}</td>
+                    <td className={td}>
+                      {pct(p.wastePct)}
+                      <span className="block text-[11px] text-[#1B1B1B]/45">
+                        {[p.staff && `equipo ${p.staff}`, p.donated && `donación ${p.donated}`, p.lost && `pérdida ${p.lost}`, p.missing && `faltan ${p.missing}`].filter(Boolean).join(" · ") || "—"}
+                      </span>
+                    </td>
+                    <td className={td}>{p.perHour === null ? "—" : num(p.perHour)}</td>
+                    <td className={td}>{money(p.netSales)}</td>
+                    <td className={td}>
+                      {money(p.costSold + p.wasteCost + p.transport + p.vendorPay)}
+                      <span className="block text-[11px] text-[#1B1B1B]/45">
+                        comida {money(p.costSold)} · merma {money(p.wasteCost)} · transporte {money(p.transport)} · vendedor {money(p.vendorPay)}
+                      </span>
+                    </td>
+                    <td className={`px-6 py-3 text-right font-bold tabular-nums ${p.profit < 0 ? "text-red-700" : "text-[#1F4D36]"}`}>{money(p.profit)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      )}
 
       {/* Por cocina */}
       {!kitchen && r.kitchens.length > 1 && (

@@ -98,6 +98,8 @@ export type ProductivityReport = {
   total: Omit<KitchenRow, "kitchenId">;
   /** Personas con actividad pero sin pago registrado en Cuentas → Nómina. */
   unpaid: string[];
+  /** Pago de cada persona en el período (para repartir el de los vendedores entre sus puntos). */
+  payByUser: Record<string, number>;
 };
 
 export async function loadProductivity(period: Period, kitchenId: string | null): Promise<ProductivityReport> {
@@ -424,5 +426,7 @@ export async function loadProductivity(period: Period, kitchenId: string | null)
 
   const unpaid = ids.filter((u) => !payOf.has(u)).map(nameOf);
 
-  return { cooks, couriers, products, kitchens, total, unpaid };
+  const payByUser: Record<string, number> = {};
+  for (const p of finance.payrollDetail) payByUser[p.userId] = (payByUser[p.userId] ?? 0) + p.cost;
+  return { cooks, couriers, products, kitchens, total, unpaid, payByUser };
 }

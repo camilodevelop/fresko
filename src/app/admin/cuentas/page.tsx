@@ -40,7 +40,9 @@ function Kpi({ icon: Icon, label, value, hint, children, tone }: { icon: typeof 
 function StatementTable({ s, prev }: { s: Statement; prev: Statement }) {
   type Row = { label: string; value: number; before: number; kind?: "minus" | "total" | "result" | "sub"; goodWhenUp?: boolean };
   const rows: Row[] = [
-    { label: "Ventas de pedidos", value: s.salesOrders, before: prev.salesOrders, kind: "sub" },
+    { label: "Ventas a domicilio", value: s.salesOrders - s.salesCounter - s.salesPoints, before: prev.salesOrders - prev.salesCounter - prev.salesPoints, kind: "sub" },
+    { label: "Ventas en mostrador", value: s.salesCounter, before: prev.salesCounter, kind: "sub" },
+    { label: "Ventas en puntos de venta", value: s.salesPoints, before: prev.salesPoints, kind: "sub" },
     { label: "Ventas de planes", value: s.salesPlans, before: prev.salesPlans, kind: "sub" },
     { label: "Ventas cobradas", value: s.grossSales, before: prev.grossSales },
     { label: "Impuestos incluidos", value: -s.taxes, before: -prev.taxes, kind: "minus" },
@@ -50,6 +52,10 @@ function StatementTable({ s, prev }: { s: Statement; prev: Statement }) {
     { label: "Pérdidas de inventario", value: -s.lossInventory, before: -prev.lossInventory, kind: "minus" },
     { label: "Platos dañados en cocina", value: -s.lossKitchen, before: -prev.lossKitchen, kind: "minus" },
     { label: "Pedidos no entregados o cancelados", value: -s.lossOrders, before: -prev.lossOrders, kind: "minus" },
+    { label: "Alimentación del equipo (platos sobrantes)", value: -s.lossStaff, before: -prev.lossStaff, kind: "minus" },
+    { label: "Donaciones de platos", value: -s.lossDonation, before: -prev.lossDonation, kind: "minus" },
+    { label: "Platos vencidos o dañados", value: -s.lossDishes, before: -prev.lossDishes, kind: "minus" },
+    { label: "Faltantes de platos", value: -s.lossMissing, before: -prev.lossMissing, kind: "minus" },
     { label: "Nómina", value: -s.payroll, before: -prev.payroll, kind: "minus" },
     { label: "Gastos fijos", value: -s.fixedExpenses, before: -prev.fixedExpenses, kind: "minus" },
     { label: "Otros gastos e imprevistos", value: -s.otherExpenses, before: -prev.otherExpenses, kind: "minus" },

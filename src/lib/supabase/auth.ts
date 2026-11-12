@@ -18,7 +18,11 @@ export type Permission =
   | "delivery.deliver"
   | "reports.view"
   | "finance.manage"
-  | "kitchens.all";
+  | "kitchens.all"
+  | "counter.sell"
+  | "counter.kiosk"
+  | "points.manage"
+  | "points.sell";
 
 export type SessionInfo = {
   userId: string;

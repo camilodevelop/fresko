@@ -9,6 +9,7 @@ import {
   ChefHat,
   Clock,
   Play,
+  MessageSquareText,
   Sparkles,
   Timer,
   X,
@@ -99,6 +100,18 @@ const thumb = (src: string | null, size = 48) => (
     )}
   </span>
 );
+
+/** Notas para cocina de los pedidos (mostrador): "FR-1424: sin cebolla". */
+function OrderNotes({ items }: { items: BoardItem[] }) {
+  const notes = [...new Map(items.filter((i) => i.note).map((i) => [i.orderCode, i.note as string])).entries()];
+  if (!notes.length) return null;
+  return (
+    <p className="mt-1.5 inline-flex flex-wrap items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
+      <MessageSquareText className="h-3.5 w-3.5" />
+      {notes.map(([code, note]) => `${code}: ${note}`).join(" · ")}
+    </p>
+  );
+}
 
 /** Producción del día: tandas por franja y plato, cronómetro, receta y etiquetas. */
 export function KitchenBoard({
@@ -214,19 +227,23 @@ export function KitchenBoard({
                 "relative min-w-[190px] shrink-0 rounded-2xl border px-4 py-3 text-left transition",
                 on
                   ? "border-[#1F4D36] bg-[#1F4D36] text-white shadow-lg shadow-[#1F4D36]/15"
-                  : "border-[#1F4D36]/10 bg-white text-[#1F4D36] hover:border-[#8BC34A]",
+                  : x.counter && left
+                    ? "border-amber-300 bg-amber-50 text-[#1F4D36] hover:border-amber-400"
+                    : x.point && left
+                      ? "border-sky-200 bg-sky-50 text-[#1F4D36] hover:border-sky-300"
+                    : "border-[#1F4D36]/10 bg-white text-[#1F4D36] hover:border-[#8BC34A]",
               )}
             >
               <p
                 className={cn(
                   "text-[10px] font-bold uppercase tracking-wider",
-                  on ? "text-white/60" : "text-[#7CB342]",
+                  on ? "text-white/60" : x.counter ? "text-amber-700" : x.point ? "text-sky-700" : "text-[#7CB342]",
                 )}
               >
-                Franja · {x.zoneName}
+                {x.counter ? "Cliente esperando" : x.point ? "Punto de venta" : `Franja · ${x.zoneName}`}
               </p>
               <p className="font-display text-base font-bold">
-                {formatTime12(a1)} – {formatTime12(b1)}
+                {x.counter ? "Mostrador" : x.point ? x.label : `${formatTime12(a1)} – ${formatTime12(b1)}`}
               </p>
               <p
                 className={cn(
@@ -289,7 +306,7 @@ export function KitchenBoard({
                     <strong>
                       {slot.ordersReady}/{slot.ordersTotal}
                     </strong>{" "}
-                    pedidos listos
+                    {slot.point ? "platos listos" : "pedidos listos"}
                   </span>
                   {slotIncidents.length > 0 && (
                     <button
@@ -350,6 +367,7 @@ export function KitchenBoard({
                           )}
                         </p>
                       )}
+                      <OrderNotes items={b.items} />
                     </div>
                     <div className="text-right">
                       <p className="flex items-center justify-end gap-1.5 font-display text-3xl font-bold text-[#1F4D36]">
@@ -443,8 +461,11 @@ export function KitchenBoard({
                           <p className="truncate text-xs text-[#1B1B1B]/50">
                             {g.kind === "armado"
                               ? g.items[0]?.options.join(", ")
-                              : `${g.orders} ${g.orders === 1 ? "pedido" : "pedidos"}: ${[...new Set(g.items.map((x) => x.orderCode))].join(", ")}`}
+                              : slot.point
+                                ? `Para ${slot.label}: quedan listos en la vitrina de la cocina para despachar`
+                                : `${g.orders} ${g.orders === 1 ? "pedido" : "pedidos"}: ${[...new Set(g.items.map((x) => x.orderCode))].join(", ")}`}
                           </p>
+                          <OrderNotes items={g.items} />
                           {g.items.some((x) => x.shortage > 0) && (
                             <p className="mt-1 inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200">
                               <AlertTriangle className="h-3 w-3" /> Faltantes

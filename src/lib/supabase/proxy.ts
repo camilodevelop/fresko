@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { Database } from "./database.types";
 import { supabaseConfigured } from "./env";
 
-const PROTECTED_PREFIXES = ["/cuenta", "/admin", "/pago"];
+const PROTECTED_PREFIXES = ["/cuenta", "/admin", "/pago", "/autoservicio"];
 
 /** Refresca la sesión de Supabase y redirige a /login las rutas privadas. */
 export async function updateSession(request: NextRequest) {
