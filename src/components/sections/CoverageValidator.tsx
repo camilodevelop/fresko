@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import {
   CheckCircle2,
   Loader2,
@@ -203,7 +203,7 @@ export function CoverageValidator({ zones }: { zones: CoverageZone[] }) {
           description={`Hoy cubrimos ${coverageLabel}. Usa tu ubicación o busca tu dirección para ver si hay cobertura.`}
         />
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -298,7 +298,7 @@ export function CoverageValidator({ zones }: { zones: CoverageZone[] }) {
                       )}
                       <AnimatePresence>
                         {suggestions.length > 0 && (
-                          <motion.ul
+                          <m.ul
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 6 }}
@@ -329,7 +329,7 @@ export function CoverageValidator({ zones }: { zones: CoverageZone[] }) {
                                 </button>
                               </li>
                             ))}
-                          </motion.ul>
+                          </m.ul>
                         )}
                       </AnimatePresence>
                     </div>
@@ -356,20 +356,20 @@ export function CoverageValidator({ zones }: { zones: CoverageZone[] }) {
 
                 <AnimatePresence mode="wait">
                   {geoError && (
-                    <motion.p
+                    <m.p
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       className="mt-3 text-sm text-amber-800"
                     >
                       {geoError}
-                    </motion.p>
+                    </m.p>
                   )}
                 </AnimatePresence>
 
                 <AnimatePresence mode="wait">
                   {result && (
-                    <motion.div
+                    <m.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
@@ -400,7 +400,7 @@ export function CoverageValidator({ zones }: { zones: CoverageZone[] }) {
                           </p>
                         )}
                       </div>
-                    </motion.div>
+                    </m.div>
                   )}
                 </AnimatePresence>
               </div>
@@ -424,7 +424,7 @@ export function CoverageValidator({ zones }: { zones: CoverageZone[] }) {
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

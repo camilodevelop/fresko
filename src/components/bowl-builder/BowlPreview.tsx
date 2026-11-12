@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import type { BuilderOption, BuilderStep } from "@/lib/data/builder";
 
 /** Vista superior del bowl: la base al fondo y cada ingrediente en su sección, con su foto. */
@@ -81,9 +81,9 @@ export function BowlPreview({ parts }: BowlPreviewProps) {
           {/* Base: cubre todo el fondo */}
           <AnimatePresence>
             {base && (
-              <motion.g key={base.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
+              <m.g key={base.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
                 <Food option={base} x={C - FOOD_R} y={C - FOOD_R} size={FOOD_R * 2} />
-              </motion.g>
+              </m.g>
             )}
           </AnimatePresence>
 
@@ -98,7 +98,7 @@ export function BowlPreview({ parts }: BowlPreviewProps) {
               // La foto se centra en la sección y se escala según su tamaño.
               const size = n <= 2 ? FOOD_R * 2 : Math.min(150, Math.max(70, rm * ((2 * Math.PI) / n) * 1.6));
               return (
-                <motion.g
+                <m.g
                   key={item.id}
                   initial={{ opacity: 0, scale: 0.92 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -113,7 +113,7 @@ export function BowlPreview({ parts }: BowlPreviewProps) {
                     <path d={sectorPath(INNER_R, FOOD_R, a1, a2)} fill="none" stroke="#FFFFFF" strokeOpacity={0.85} strokeWidth={1.4} strokeLinejoin="round" />
                   )}
                   <title>{item.name}</title>
-                </motion.g>
+                </m.g>
               );
             })}
           </AnimatePresence>
@@ -138,7 +138,7 @@ export function BowlPreview({ parts }: BowlPreviewProps) {
         {/* Salsa en un recipiente pequeño */}
         <AnimatePresence>
           {sauce && (
-            <motion.g
+            <m.g
               key={sauce.id}
               initial={{ opacity: 0, scale: 0.6 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -152,19 +152,19 @@ export function BowlPreview({ parts }: BowlPreviewProps) {
                 <circle cx={170} cy={34} r={17} fill="none" stroke="#000" strokeOpacity={0.12} strokeWidth={2} />
               </g>
               <title>{sauce.name}</title>
-            </motion.g>
+            </m.g>
           )}
         </AnimatePresence>
       </svg>
 
-      <motion.p
+      <m.p
         key={total}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-white/90 px-4 py-1.5 text-xs font-medium text-[#1F4D36] shadow-md backdrop-blur-sm"
       >
         {total === 0 ? "Selecciona ingredientes" : `${total} ingrediente${total > 1 ? "s" : ""}`}
-      </motion.p>
+      </m.p>
     </div>
   );
 }

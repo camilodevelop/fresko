@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import {
   Leaf,
   ShoppingBag,
@@ -41,7 +41,7 @@ export function Hero() {
       </div>
 
       <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -78,7 +78,7 @@ export function Hero() {
             </Button>
           </div>
 
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.5 }}
@@ -86,7 +86,7 @@ export function Hero() {
             aria-label="Datos destacados"
           >
             {heroStats.map((stat, i) => (
-              <motion.div
+              <m.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -99,13 +99,13 @@ export function Hero() {
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#1B1B1B]/45 sm:text-xs">
                   {stat.label}
                 </p>
-              </motion.div>
+              </m.div>
             ))}
-          </motion.div>
+          </m.div>
 
           <div className="mt-8 flex flex-wrap gap-2">
             {badges.map((badge, i) => (
-              <motion.div
+              <m.div
                 key={badge.label}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -115,12 +115,12 @@ export function Hero() {
                   <badge.icon className="h-3.5 w-3.5 text-[#8BC34A]" />
                   {badge.label}
                 </Badge>
-              </motion.div>
+              </m.div>
             ))}
           </div>
-        </motion.div>
+        </m.div>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.2 }}
@@ -138,7 +138,7 @@ export function Hero() {
             />
           </div>
 
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.8, type: "spring", stiffness: 260, damping: 22 }}
@@ -163,8 +163,8 @@ export function Hero() {
                 </p>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       </div>
     </section>
   );

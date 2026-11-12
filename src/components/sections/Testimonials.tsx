@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Star } from "lucide-react";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { TESTIMONIALS } from "@/lib/data/testimonials";
@@ -17,7 +17,7 @@ export function Testimonials() {
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {TESTIMONIALS.map((t, i) => (
-            <motion.blockquote
+            <m.blockquote
               key={t.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -47,7 +47,7 @@ export function Testimonials() {
                   <p className="text-xs text-[#1B1B1B]/50">{t.role}</p>
                 </div>
               </footer>
-            </motion.blockquote>
+            </m.blockquote>
           ))}
         </div>
       </div>

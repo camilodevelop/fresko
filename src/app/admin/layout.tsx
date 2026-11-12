@@ -8,7 +8,6 @@ export const metadata: Metadata = { title: "Panel | FRESKO" };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requirePermission("admin.access");
-
   const notifications = await getNotifications(session.userId);
 
   return (

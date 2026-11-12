@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MenuItem } from "@/lib/data/products";
@@ -117,8 +117,8 @@ export function MenuProductCard({
         };
 
   return (
-    <motion.article {...motionProps} className={cardClassName}>
+    <m.article {...motionProps} className={cardClassName}>
       <CardContent item={item} />
-    </motion.article>
+    </m.article>
   );
 }

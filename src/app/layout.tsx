@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import { CartProvider } from "@/components/cart/CartProvider";
+import { MotionProvider } from "@/components/ui/motion-provider";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
@@ -46,7 +47,9 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${inter.variable} ${poppins.variable}`} data-scroll-behavior="smooth">
       <body className="min-h-screen antialiased" suppressHydrationWarning>
-        <CartProvider>{children}</CartProvider>
+        <MotionProvider>
+          <CartProvider>{children}</CartProvider>
+        </MotionProvider>
         <Toaster />
       </body>
     </html>

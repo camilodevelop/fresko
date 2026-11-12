@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useNavActive } from "@/components/layout/NavActiveProvider";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS } from "@/lib/constants";
@@ -55,7 +55,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
-          <motion.button
+          <m.button
             type="button"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -66,7 +66,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             aria-label="Cerrar menú"
           />
 
-          <motion.nav
+          <m.nav
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -98,7 +98,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                 </Link>
               </Button>
             </div>
-          </motion.nav>
+          </m.nav>
         </div>
       )}
     </AnimatePresence>

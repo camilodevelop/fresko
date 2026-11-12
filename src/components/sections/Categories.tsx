@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/ui/section-heading";
 import type { MenuCategory } from "@/lib/data/products";
@@ -30,7 +30,7 @@ export function Categories({ categories }: { categories: MenuCategory[] }) {
 
         <div className={`mt-12 grid gap-6 sm:grid-cols-2 ${categories.length > 2 ? "lg:grid-cols-3" : ""}`}>
           {categories.map((cat, i) => (
-            <motion.article
+            <m.article
               key={cat.slug}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -65,13 +65,13 @@ export function Categories({ categories }: { categories: MenuCategory[] }) {
                   </Link>
                 </div>
               </div>
-              <motion.div
+              <m.div
                 className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#1F4D36] text-white opacity-0 transition-opacity group-hover:opacity-100"
                 whileHover={{ scale: 1.1 }}
               >
                 <ArrowRight className="h-4 w-4" />
-              </motion.div>
-            </motion.article>
+              </m.div>
+            </m.article>
           ))}
         </div>
       </div>

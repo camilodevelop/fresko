@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Bell, BellOff, CheckCheck, CheckCircle2, Info, OctagonAlert } from "lucide-react";
 import { markAllNotificationsRead, markNotificationRead } from "@/app/actions/notifications";
 import { toast } from "@/lib/notify";
-import { createClient } from "@/lib/supabase/client";
 import type { NotificationItem } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
@@ -35,15 +34,18 @@ export function NotificationsProvider({
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
+    let stop: (() => void) | null = null;
 
-    // El canal debe autenticarse con el token del usuario; si no, RLS oculta sus filas.
-    supabase.auth.getSession().then(async ({ data }) => {
+    // El cliente de Supabase (tiempo real) se carga aparte, después de mostrar la página.
+    import("@/lib/supabase/client").then(async ({ createClient }) => {
+      if (cancelled) return;
+      const supabase = createClient();
+      const { data } = await supabase.auth.getSession();
+      // El canal debe autenticarse con el token del usuario; si no, RLS oculta sus filas.
       if (cancelled || !data.session) return;
       await supabase.realtime.setAuth(data.session.access_token);
-      channel = supabase
+      const channel = supabase
         .channel(`notifications:${userId}`)
         .on(
           "postgres_changes",
@@ -56,11 +58,12 @@ export function NotificationsProvider({
           }
         )
         .subscribe();
+      stop = () => supabase.removeChannel(channel);
     });
 
     return () => {
       cancelled = true;
-      if (channel) supabase.removeChannel(channel);
+      stop?.();
     };
   }, [userId]);
 

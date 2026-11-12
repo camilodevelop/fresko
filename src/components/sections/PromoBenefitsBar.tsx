@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { CalendarCheck, Gift, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -30,7 +30,7 @@ export function PromoBenefitsBar() {
       aria-label="Beneficios FRESKO"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-40px" }}
@@ -39,7 +39,7 @@ export function PromoBenefitsBar() {
         >
           <div className="grid flex-1 gap-4 sm:grid-cols-3 sm:gap-5">
             {benefits.map((item, i) => (
-              <motion.div
+              <m.div
                 key={item.title}
                 initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -58,7 +58,7 @@ export function PromoBenefitsBar() {
                     {item.text}
                   </p>
                 </div>
-              </motion.div>
+              </m.div>
             ))}
           </div>
 
@@ -72,7 +72,7 @@ export function PromoBenefitsBar() {
               <Link href="/#suscripciones">Conocer los planes</Link>
             </Button>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

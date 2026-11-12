@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { CalendarClock, ChefHat, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -37,7 +37,7 @@ export function HowItWorks() {
 
         <div className="mt-14 grid gap-8 md:grid-cols-3">
           {steps.map((step, i) => (
-            <motion.div
+            <m.div
               key={step.title}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -63,7 +63,7 @@ export function HowItWorks() {
                   aria-hidden
                 />
               )}
-            </motion.div>
+            </m.div>
           ))}
         </div>
 

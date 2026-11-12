@@ -44,10 +44,16 @@ export type SessionInfo = {
 /** Usuario actual y sus permisos (una sola consulta por request). */
 export const getSession = cache(async (): Promise<SessionInfo | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // getClaims verifica la firma del token sin llamar al servidor de Auth en cada request
+  // (con llaves asimétricas); los permisos los vuelve a exigir la base con RLS.
+  const { data: auth } = await supabase.auth.getClaims();
+  const claims = auth?.claims;
+  if (!claims?.sub) return null;
+  const user = {
+    id: claims.sub,
+    email: (claims.email as string | undefined) ?? null,
+    providers: ((claims.app_metadata as { providers?: string[] } | undefined)?.providers ?? []) as string[],
+  };
 
   const [{ data: profile }, { data: perms }, { data: roles }, { data: consents }] = await Promise.all([
     supabase.from("profiles").select("full_name, avatar_url, active").eq("id", user.id).single(),
@@ -68,14 +74,14 @@ export const getSession = cache(async (): Promise<SessionInfo | null> => {
 
   return {
     userId: user.id,
-    email: user.email ?? null,
+    email: user.email,
     fullName: profile?.full_name ?? "",
     avatarUrl: profile?.avatar_url ?? null,
     roleNames: (roles ?? []).map((r) => r.roles.name),
     permissions,
     allKitchens: permissions.has("kitchens.all"),
     isStaff: permissions.has("admin.access"),
-    hasPassword: (user.identities ?? []).some((i) => i.provider === "email"),
+    hasPassword: user.providers.includes("email"),
     needsConsent: !(
       latest("terminos")?.accepted &&
       latest("terminos")?.version === LEGAL_VERSIONS.terminos &&

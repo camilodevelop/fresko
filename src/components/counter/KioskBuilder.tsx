@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BowlPreview } from "@/components/bowl-builder/BowlPreview";
@@ -149,7 +149,7 @@ export function KioskBuilder({
 
         <AnimatePresence mode="wait">
           {!reviewing ? (
-            <motion.section key={step.id} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
+            <m.section key={step.id} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
               <div className="flex flex-wrap items-end justify-between gap-2">
                 {/* En pantallas angostas el bowl en vivo va junto al título. */}
                 <div className="mb-4 flex basis-full justify-center lg:hidden">
@@ -173,7 +173,7 @@ export function KioskBuilder({
                   const on = picked[step.id].includes(o.id);
                   const full = !on && max > 1 && picked[step.id].length >= max;
                   return (
-                    <motion.button
+                    <m.button
                       key={o.id}
                       type="button"
                       whileTap={{ scale: 0.96 }}
@@ -201,13 +201,13 @@ export function KioskBuilder({
                       <span className="mt-1 text-sm text-[#1B1B1B]/55">
                         {[o.price > 0 ? `+${formatPrice(o.price)}` : "Incluido", o.nutrition ? `${Math.round(o.nutrition.kcal)} kcal` : null].filter(Boolean).join(" · ")}
                       </span>
-                    </motion.button>
+                    </m.button>
                   );
                 })}
               </div>
-            </motion.section>
+            </m.section>
           ) : (
-            <motion.section key="review" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
+            <m.section key="review" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
               <h2 className="font-display text-3xl font-bold text-[#1F4D36]">Así quedó tu bowl</h2>
               <p className="mt-1 text-base text-[#1B1B1B]/55">Revisa y toca un paso para cambiarlo.</p>
               <div className="mx-auto mt-5 max-w-[260px] lg:hidden">
@@ -232,7 +232,7 @@ export function KioskBuilder({
                 </p>
               )}
               {allergens.length > 0 && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Contiene: {allergens.map(allergenLabel).join(", ")}</p>}
-            </motion.section>
+            </m.section>
           )}
         </AnimatePresence>
       </div>

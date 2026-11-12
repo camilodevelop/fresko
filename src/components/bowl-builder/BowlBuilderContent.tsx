@@ -5,7 +5,7 @@ import { toast } from "@/lib/notify";
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ShoppingCart } from "lucide-react";
 import { BowlPreview } from "@/components/bowl-builder/BowlPreview";
 import { Button } from "@/components/ui/button";
@@ -143,7 +143,7 @@ export function BowlBuilderContent({
           ))}
         </div>
 
-        <motion.div
+        <m.div
           key={activeStep}
           initial={{ opacity: 0, x: 12 }}
           animate={{ opacity: 1, x: 0 }}
@@ -162,7 +162,7 @@ export function BowlBuilderContent({
             {BUILDER_OPTIONS[activeStep].map((option) => {
               const selected = selections[activeStep].includes(option.id);
               return (
-                <motion.button
+                <m.button
                   key={option.id}
                   type="button"
                   whileTap={{ scale: 0.96 }}
@@ -189,11 +189,11 @@ export function BowlBuilderContent({
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
-                </motion.button>
+                </m.button>
               );
             })}
           </div>
-        </motion.div>
+        </m.div>
       </div>
 
       <div className="lg:col-span-3 lg:sticky lg:top-32 lg:self-start">
