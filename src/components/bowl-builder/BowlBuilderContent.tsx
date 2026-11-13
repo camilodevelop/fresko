@@ -7,7 +7,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { m } from "framer-motion";
 import { ShoppingCart } from "lucide-react";
-import { BowlPreview } from "@/components/bowl-builder/BowlPreview";
+import { BowlPreview, usePreloadBowl } from "@/components/bowl-builder/BowlPreview";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart/CartProvider";
 import {
@@ -43,6 +43,7 @@ export function BowlBuilderContent({
   const { addItem } = useCart();
   const [activeStep, setActiveStep] = useState<BuilderStep>("base");
   const [selections, setSelections] = useState<Selections>(initialSelections);
+  usePreloadBowl(BUILDER_OPTIONS);
 
   const toggleOption = useCallback((step: BuilderStep, optionId: string) => {
     const stepConfig = BUILDER_STEPS.find((s) => s.id === step)!;
@@ -120,11 +121,11 @@ export function BowlBuilderContent({
 
   return (
     <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
-      <div className="mx-auto w-full max-w-[280px] sm:max-w-[340px] lg:col-span-4 lg:sticky lg:top-32 lg:max-w-none lg:self-start">
+      <div className="mx-auto w-full max-w-[520px] lg:col-span-5 lg:sticky lg:top-32 lg:max-w-none lg:self-start">
         <BowlPreview parts={parts} />
       </div>
 
-      <div className="lg:col-span-5">
+      <div className="lg:col-span-4">
         <div className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
           {BUILDER_STEPS.map((step) => (
             <button
@@ -158,7 +159,7 @@ export function BowlBuilderContent({
             selección(es)
           </p>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
             {BUILDER_OPTIONS[activeStep].map((option) => {
               const selected = selections[activeStep].includes(option.id);
               return (

@@ -6,7 +6,7 @@ import type { BuilderOptionInput } from "@/app/admin/catalogo/actions";
 export default async function ArmadorPage() {
   const supabase = await createClient();
   const [{ data: options }, ingredients, settings] = await Promise.all([
-    supabase.from("builder_options").select("id, step, name, emoji, ingredient_id, quantity, price, active").order("sort").order("name"),
+    supabase.from("builder_options").select("id, step, name, emoji, ingredient_id, quantity, price, active, bowl_image").order("sort").order("name"),
     loadIngredients(),
     loadPricingSettings(),
   ]);
@@ -24,6 +24,7 @@ export default async function ArmadorPage() {
         quantity: Number(o.quantity),
         price: o.price,
         active: o.active,
+        bowlImage: o.bowl_image,
       }))}
     />
   );

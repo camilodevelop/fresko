@@ -231,6 +231,8 @@ export type BuilderOptionInput = {
   quantity: number;
   price: number;
   active: boolean;
+  /** Imagen recortada para el bowl realista. */
+  bowlImage: string | null;
 };
 
 
@@ -250,6 +252,7 @@ export async function saveBuilderOption(input: BuilderOptionInput): Promise<Acti
     quantity: input.quantity,
     price: input.price,
     active: input.active,
+    bowl_image: input.bowlImage,
   };
   const { error } = input.id
     ? await supabase.from("builder_options").update(row).eq("id", input.id)

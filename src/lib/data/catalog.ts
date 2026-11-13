@@ -83,7 +83,7 @@ export async function getBuilderConfig(slug?: string): Promise<BuilderConfig> {
 
   const supabase = publicClient();
   const [{ data: rows }, { data: builders }] = await Promise.all([
-    supabase.from("builder_options").select("id, step, name, emoji, price, nutrition, allergens, image_url").eq("active", true).order("sort"),
+    supabase.from("builder_options").select("id, step, name, emoji, price, nutrition, allergens, image_url, bowl_image").eq("active", true).order("sort"),
     supabase
       .from("products")
       .select("slug, name, price, sort, product_categories!inner(name, sort, active)")
@@ -99,6 +99,7 @@ export async function getBuilderConfig(slug?: string): Promise<BuilderConfig> {
       emoji: o.emoji,
       price: o.price,
       image: o.image_url,
+      bowlImage: o.bowl_image,
       nutrition: parseNutrition(o.nutrition),
       allergens: o.allergens,
     });

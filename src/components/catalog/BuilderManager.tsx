@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useId, useState, useTransition } from "react";
-import { Check, Plus } from "lucide-react";
+import { useId, useRef, useState, useTransition } from "react";
+import { Check, ImagePlus, Plus } from "lucide-react";
 import { saveBuilderOption, type BuilderOptionInput } from "@/app/admin/catalogo/actions";
 import { Panel } from "@/components/dashboard/ui";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { first, rules } from "@/lib/validation";
 import { Switch } from "@/components/ui/switch";
 import { suggestedPrice, type PricingSettings, type Unit } from "@/lib/pricing";
 import { notify } from "@/lib/notify";
+import { uploadBowlImage } from "@/lib/upload-image";
 import { cn, formatPrice } from "@/lib/utils";
 
 type Ing = { id: string; name: string; unit: Unit; cost_per_unit: number; image: string | null };
@@ -44,7 +45,17 @@ function OptionRow({
   const [o, setO] = useState(initial);
   const [dirty, setDirty] = useState(!initial.id);
   const [pending, start] = useTransition();
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const ing = ingredients.find((i) => i.id === o.ingredientId);
+  const pickBowl = async (file: File | undefined) => {
+    if (!file) return;
+    setUploading(true);
+    const r = await uploadBowlImage(file);
+    setUploading(false);
+    if (r.error) notify(r);
+    else if (r.url) set({ bowlImage: r.url });
+  };
   const cost = ing ? Math.round(o.quantity * ing.cost_per_unit) : 0;
   const suggested = suggestedPrice(cost, settings.targetMargin, settings.rounding);
 
@@ -102,6 +113,26 @@ function OptionRow({
             <span className="flex h-full w-full items-center justify-center text-lg">{o.emoji}</span>
           )}
         </span>
+        {/* Imagen para el bowl realista (montoncito recortado o salsa en zigzag) */}
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          title={o.bowlImage ? "Imagen para el bowl · toca para cambiarla" : "Sin imagen para el bowl: sube un PNG recortado (vista 3/4)"}
+          className={cn(
+            "relative h-10 w-12 shrink-0 overflow-hidden rounded-xl border-2 border-dashed",
+            o.bowlImage ? "border-transparent bg-[#F8F7F2]" : "border-amber-300 bg-amber-50 text-amber-700"
+          )}
+        >
+          {o.bowlImage ? (
+            // eslint-disable-next-line @next/next/no-img-element -- vista previa de la capa
+            <img src={o.bowlImage} alt="" className="h-full w-full object-contain p-0.5" />
+          ) : (
+            <ImagePlus className="mx-auto h-4 w-4" />
+          )}
+          {uploading && <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-[10px] font-bold">…</span>}
+        </button>
+        <input ref={fileRef} type="file" accept="image/png,image/webp" className="hidden" onChange={(e) => pickBowl(e.target.files?.[0] ?? undefined)} />
         <div className="min-w-0 flex-1">
           <Input {...v.field("name")} aria-label="Nombre" className="h-10" value={o.name} onChange={(e) => set({ name: e.target.value })} placeholder="Nombre" />
           <FieldError name={v.idFor("name")} error={v.error("name")} />
@@ -229,7 +260,7 @@ export function BuilderManager({
                   taken={list.map((x) => x.name.trim().toLowerCase())}
                   ingredients={ingredients}
                   settings={settings}
-                  initial={{ step, name: "", emoji: "🥗", ingredientId: null, quantity: 0, price: 0, active: true }}
+                  initial={{ step, bowlImage: null, name: "", emoji: "🥗", ingredientId: null, quantity: 0, price: 0, active: true }}
                 />
               ))}
             </div>

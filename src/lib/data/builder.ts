@@ -7,8 +7,10 @@ export type BuilderOption = {
   name: string;
   emoji: string;
   price: number;
-  /** Foto del ingrediente: con ella se arma la vista previa del bowl. */
+  /** Foto del ingrediente (botón). */
   image: string | null;
+  /** Imagen recortada para el bowl realista (montoncito en 3/4 o la salsa en zigzag). */
+  bowlImage: string | null;
   nutrition: Nutrition | null;
   allergens: string[];
 };

@@ -141,7 +141,7 @@ function CompactBuilder({
 
   return (
     <div>
-      <div className="mx-auto w-full max-w-[220px]">
+      <div className="mx-auto w-full max-w-[320px]">
         <BowlPreview parts={parts} />
       </div>
       <div className="mt-6 space-y-5">

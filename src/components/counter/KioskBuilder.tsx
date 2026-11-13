@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BowlPreview } from "@/components/bowl-builder/BowlPreview";
+import { BowlPreview, usePreloadBowl } from "@/components/bowl-builder/BowlPreview";
 import { BUILDER_STEPS, type BuilderOption, type BuilderStep } from "@/lib/data/builder";
 import { allergenLabel, formatGrams, sumNutrition } from "@/lib/nutrition";
 import { cn, formatPrice } from "@/lib/utils";
@@ -45,6 +45,7 @@ export function KioskBuilder({
   // Paso actual; BUILDER_STEPS.length = revisión final.
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<Picked>(EMPTY);
+  usePreloadBowl(options);
   const reviewing = index >= BUILDER_STEPS.length;
   const step = BUILDER_STEPS[Math.min(index, BUILDER_STEPS.length - 1)];
   const max = step.max ?? 1;
@@ -128,7 +129,7 @@ export function KioskBuilder({
         </ol>
       </header>
 
-      <div className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 gap-6 overflow-y-auto px-5 py-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 gap-6 overflow-y-auto px-5 py-6 lg:grid-cols-[420px_minmax(0,1fr)]">
         {/* Bowl en vivo */}
         <aside className="hidden lg:block">
           <div className="sticky top-0 space-y-4">
@@ -153,8 +154,8 @@ export function KioskBuilder({
               <div className="flex flex-wrap items-end justify-between gap-2">
                 {/* En pantallas angostas el bowl en vivo va junto al título. */}
                 <div className="mb-4 flex basis-full justify-center lg:hidden">
-                  <div className="w-44">
-                    <BowlPreview parts={parts} />
+                  <div className="w-64">
+                    <BowlPreview parts={parts} compact />
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
@@ -210,7 +211,7 @@ export function KioskBuilder({
             <m.section key="review" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
               <h2 className="font-display text-3xl font-bold text-[#1F4D36]">Así quedó tu bowl</h2>
               <p className="mt-1 text-base text-[#1B1B1B]/55">Revisa y toca un paso para cambiarlo.</p>
-              <div className="mx-auto mt-5 max-w-[260px] lg:hidden">
+              <div className="mx-auto mt-5 max-w-[360px] lg:hidden">
                 <BowlPreview parts={parts} />
               </div>
               <ul className="mt-5 space-y-3">

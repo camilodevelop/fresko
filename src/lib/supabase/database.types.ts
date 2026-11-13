@@ -51,14 +51,14 @@ isOneToOne: false
                   ]
                 },"builder_options": {
                   Row: {
-                    "active": boolean,"allergens": (string)[],"created_at": string,"emoji": string,"id": string,"image_url": string | null,"ingredient_id": string | null,"layer": NonNullable<Json>,"name": string,"nutrition": NonNullable<Json>,"price": number,"quantity": number,"sort": number,"step": string
+                    "active": boolean,"allergens": (string)[],"bowl_image": string | null,"created_at": string,"emoji": string,"id": string,"image_url": string | null,"ingredient_id": string | null,"layer": NonNullable<Json>,"name": string,"nutrition": NonNullable<Json>,"price": number,"quantity": number,"sort": number,"step": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"allergens"?: (string)[],"created_at"?: string,"emoji"?: string,"id"?: string,"image_url"?: string | null,"ingredient_id"?: string | null,"layer"?: NonNullable<Json>,"name": string,"nutrition"?: NonNullable<Json>,"price"?: number,"quantity"?: number,"sort"?: number,"step": string
+                    "active"?: boolean,"allergens"?: (string)[],"bowl_image"?: string | null,"created_at"?: string,"emoji"?: string,"id"?: string,"image_url"?: string | null,"ingredient_id"?: string | null,"layer"?: NonNullable<Json>,"name": string,"nutrition"?: NonNullable<Json>,"price"?: number,"quantity"?: number,"sort"?: number,"step": string
                   }
                   Update: {
-                    "active"?: boolean,"allergens"?: (string)[],"created_at"?: string,"emoji"?: string,"id"?: string,"image_url"?: string | null,"ingredient_id"?: string | null,"layer"?: NonNullable<Json>,"name"?: string,"nutrition"?: NonNullable<Json>,"price"?: number,"quantity"?: number,"sort"?: number,"step"?: string
+                    "active"?: boolean,"allergens"?: (string)[],"bowl_image"?: string | null,"created_at"?: string,"emoji"?: string,"id"?: string,"image_url"?: string | null,"ingredient_id"?: string | null,"layer"?: NonNullable<Json>,"name"?: string,"nutrition"?: NonNullable<Json>,"price"?: number,"quantity"?: number,"sort"?: number,"step"?: string
                   }
                   Relationships: [
                     {
@@ -1690,11 +1690,17 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"my_kitchen_list":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
 "my_kitchens":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
 "my_open_cash_session":
 { Args: { "p_kitchen_id": string }; Returns: string
+                           },
+"my_perm_list":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
 "my_permissions":
 { Args: Record<PropertyKey, never>; Returns: string[]
